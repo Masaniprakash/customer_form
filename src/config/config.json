@@ -1,0 +1,10 @@
+{
+    "local": {
+        "username": "postgres",
+        "password": "postgresql",
+        "database": "customerform",
+        "host": "localhost",
+        "port": 5432,
+        "dialect": "postgres"
+    }
+}
