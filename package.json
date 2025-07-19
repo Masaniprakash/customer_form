@@ -5,8 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon ./src/index.ts",
+    "build": "tsc",
     "dev": "nodemon ./src/index.ts",
-    "build": "tsc --project tsconfig.json",
     "build-2": "tsc4"
   },
   "keywords": [],

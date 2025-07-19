@@ -4,12 +4,14 @@ import projectRoutes from "./routes/project.routes";
 import modRoutes from "./routes/mod.routes";
 import lfcRoutes from "./routes/lfc.routes";
 import mongoose from "mongoose";
+import dotenv from "dotenv";
 
 const app = express();
 app.use(express.json());
+dotenv.config();
+
 const port = process.env.PORT || 5005
 const db = process.env.DBURL || "mongodb://localhost:27017/customer"
-
 mongoose.connect(db).then(()=>{
   console.log("Connected to MongoDB")
 }).catch((error:any)=>{
