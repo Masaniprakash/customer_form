@@ -5,10 +5,12 @@ import modRoutes from "./routes/mod.routes";
 import lfcRoutes from "./routes/lfc.routes";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import cors from "cors";
 
 const app = express();
 app.use(express.json());
 dotenv.config();
+app.use(cors());
 
 const port = process.env.PORT || 5005
 const db = process.env.DBURL || "mongodb://localhost:27017/customer"
