@@ -89,7 +89,7 @@ export const updateCustomer = async (req: Request, res: Response) => {
   if (updateFields.email) {
     updateFields.email = updateFields.email.trim().toLowerCase();
     const [emailErr, existingEmail] = await toAwait(
-      Customer.findOne({ email: updateFields.email, _id: {$ne: _id}  })
+      Customer.findOne({ email: updateFields.email, _id: { $ne: _id } })
     );
     if (emailErr) return ReE(res, emailErr, httpStatus.INTERNAL_SERVER_ERROR);
     if (existingEmail) {
@@ -102,7 +102,7 @@ export const updateCustomer = async (req: Request, res: Response) => {
       return ReE(res, { message: `Invalid phone number!` }, httpStatus.BAD_REQUEST);
     }
     const [phoneErr, existingPhone] = await toAwait(
-      Customer.findOne({ phone: updateFields.phone, _id: {$ne: _id} }))
+      Customer.findOne({ phone: updateFields.phone, _id: { $ne: _id } }))
     if (phoneErr) return ReE(res, phoneErr, httpStatus.INTERNAL_SERVER_ERROR);
     if (existingPhone) {
       return ReE(res, { message: `Phone already exists!` }, httpStatus.BAD_REQUEST);
@@ -145,4 +145,27 @@ export const getAllCustomer = async (req: Request, res: Response) => {
   }
 
   ReS(res, { message: "customer found", data: getCustomer }, httpStatus.OK)
+}
+
+export const deleteCustomer = async (req: Request, res: Response) => {
+  let err, { _id } = req.body;
+  if(!_id){
+    return ReE(res, { message: `Customer _id is required!` }, httpStatus.BAD_REQUEST);
+  }
+  if (!mongoose.isValidObjectId(_id)) {
+    return ReE(res, { message: `Invalid customer id!` }, httpStatus.BAD_REQUEST);
+  }
+
+  let checkUser;
+  [err, checkUser] = await toAwait(Customer.findOne({ _id: _id }));
+  if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+  if (!checkUser) {
+    return ReE(res, { message: `customer not found for given id!.` }, httpStatus.NOT_FOUND)
+    }
+
+  let deleteUser;
+  [err, deleteUser] = await toAwait(Customer.deleteOne({ _id: _id }));
+  if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR)
+  ReS(res, { message: "customer deleted" }, httpStatus.OK)
+
 }
