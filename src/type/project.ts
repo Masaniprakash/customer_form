@@ -2,7 +2,7 @@ export interface IProject {
   _id?: string; // MongoDB ID, optional when creating
   projectName: string;
   description: string;
-  stortName: string;
+  shortName: string;
   duration: string;
   emiAmount: number;
   marketer: string;

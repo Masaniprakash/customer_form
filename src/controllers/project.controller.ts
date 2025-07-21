@@ -7,13 +7,16 @@ import mongoose from "mongoose";
 
 export const createProject = async (req: Request, res: Response) => {
   let body = req.body, err;
-  let {  projectName,  description,  stortName,  duration,  emiAmount,  marketer,  schema,  returns,  intrest,  totalInvestimate,  totalReturnAmount } = body;
+  let {  projectName,  description,  shortName,  duration,  emiAmount,  marketer,  schema,  returns,  intrest,  totalInvestimate,  totalReturnAmount } = body;
   let checkProject;
   [err,checkProject] = await toAwait(Project.findOne(body))
   if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
   if (checkProject) return ReE(res, { message: "Project already exist for given all data" }, httpStatus.BAD_REQUEST);
   let project;
   [err, project] = await toAwait(Project.create(body));
+  console.log(body);
+  console.log(err);
+  
   if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
   if (!project) {
     return ReE(res, { message: `Failed to create project!.` }, httpStatus.INTERNAL_SERVER_ERROR)
@@ -43,7 +46,7 @@ export const updateProject = async (req: Request, res: Response) => {
   }
 
   const allowedFields = [
-    "projectName",  "description",  "stortName",  "duration",  "emiAmount",  "marketer",  "schema",  "returns",  "intrest",  "totalInvestimate",  "totalReturnAmount"
+    "projectName",  "description",  "shortName",  "duration",  "emiAmount",  "marketer",  "schema",  "returns",  "intrest",  "totalInvestimate",  "totalReturnAmount"
   ];
 
   const updateFields: Record<string, any> = {};
