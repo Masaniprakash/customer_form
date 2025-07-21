@@ -96,3 +96,27 @@ export const getAllProject = async (req: Request, res: Response) => {
 
   ReS(res, { message: "project found", data: getProject }, httpStatus.OK)
 }
+
+
+export const deleteProject = async (req: Request, res: Response) => {
+  let err, { _id } = req.body;
+  if(!_id){
+    return ReE(res, { message: `Project _id is required!` }, httpStatus.BAD_REQUEST);
+  }
+  if (!mongoose.isValidObjectId(_id)) {
+    return ReE(res, { message: `Invalid project id!` }, httpStatus.BAD_REQUEST);
+  }
+
+  let checkUser;
+  [err, checkUser] = await toAwait(Project.findOne({ _id: _id }));
+  if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+  if (!checkUser) {
+    return ReE(res, { message: `project not found for given id!.` }, httpStatus.NOT_FOUND)
+  }
+
+  let deleteUser;
+  [err, deleteUser] = await toAwait(Project.deleteOne({ _id: _id }));
+  if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR)
+  ReS(res, { message: "project deleted" }, httpStatus.OK)
+
+}
