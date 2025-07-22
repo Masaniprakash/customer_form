@@ -6,5 +6,6 @@ export interface IMarketingHead {
   phone: string;
   address: string;
   status: string;
+  percentageId:string;
 }
 

@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose, Schema } from "mongoose";
 
 const marketingHeadSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -8,6 +8,7 @@ const marketingHeadSchema = new mongoose.Schema({
     phone: { type: String, required: true },
     address: { type: String, required: true },
     status: { type: String, default: 'active' },
+    percentageId: {type: Schema.Types.ObjectId, ref: 'Percentage', required: true }
 }, { timestamps: true });
 
 export const MarketingHead = mongoose.model("MarketingHead", marketingHeadSchema);

@@ -4,15 +4,23 @@ import httpStatus from "http-status";
 import { MarketingHead } from "../models/marketingHead.model";
 import { IMarketingHead } from "../type/marketingHead";
 import mongoose from "mongoose";
+import { Percentage } from "../models/percentage.model";
 
 export const createMarketingHead = async (req: Request, res: Response) => {
     let body = req.body, err;
-    let { name, email, gender, age, phone, address, status } = body;
-    let fields = ["name", "email", "gender", "age", "phone", "address", "status"];
+    let { name, email, gender, age, phone, address, status, percentageId } = body;
+    let fields = ["name", "email", "gender", "age", "phone", "address", "status", "percentageId"];
     let inVaildFields = fields.filter(x => isNull(body[x]));
     if (inVaildFields.length > 0) {
         return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
     }
+    if (!mongoose.isValidObjectId(percentageId)) {
+        return ReE(res, { message: "Invalid percentage id" }, httpStatus.BAD_REQUEST);
+    }
+    let checkPer;
+    [err, checkPer] = await toAwait(Percentage.findOne({ _id: percentageId }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    if (!checkPer) return ReE(res, { message: "Percentage is not found for given id" }, httpStatus.NOT_FOUND)
     if (gender) {
         gender = gender.toLowerCase();
         let genderList = ["male", "female", "other"];
@@ -57,7 +65,7 @@ export const createMarketingHead = async (req: Request, res: Response) => {
 
 export const updateMarketingHead = async (req: Request, res: Response) => {
     const body = req.body;
-    let { _id, name, email, gender, age, phone, address, status } = body;
+    let { _id, name, email, gender, age, phone, address, status, percentageId } = body;
     let err: any;
     if (!_id) {
         return ReE(res, { message: `_id is required!` }, httpStatus.BAD_REQUEST);
@@ -65,10 +73,19 @@ export const updateMarketingHead = async (req: Request, res: Response) => {
     if (!mongoose.isValidObjectId(_id)) {
         return ReE(res, { message: `Invalid marketing_head _id!` }, httpStatus.BAD_REQUEST);
     }
-    let fields = ["name", "email", "gender", "age", "phone", "address", "status"];
+    let fields = ["name", "email", "gender", "age", "phone", "address", "status", "percentageId"];
     let inVaildFields = fields.filter(x => !isNull(body[x]));
     if (inVaildFields.length === 0) {
         return ReE(res, { message: `Please enter any one field to update ${fields}!.` }, httpStatus.BAD_REQUEST);
+    }
+    if (percentageId) {
+        if (!mongoose.isValidObjectId(percentageId)) {
+            return ReE(res, { message: "Invalid percentage id" }, httpStatus.BAD_REQUEST);
+        }
+        let checkPer;
+        [err, checkPer] = await toAwait(Percentage.findOne({ _id: percentageId }));
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (!checkPer) return ReE(res, { message: "Percentage is not found for given id" }, httpStatus.NOT_FOUND)
     }
     if (gender) {
         gender = gender.toLowerCase();
@@ -86,18 +103,8 @@ export const updateMarketingHead = async (req: Request, res: Response) => {
         return ReE(res, { message: `marketing_head not found for given id!.` }, httpStatus.NOT_FOUND)
     }
 
-    const allowedFields = [
-        "name",
-        "email",
-        "gender",
-        "age",
-        "phone",
-        "address",
-        "status"
-    ];
-
     const updateFields: Record<string, any> = {};
-    for (const key of allowedFields) {
+    for (const key of fields) {
         if (!isNull(body[key])) {
             updateFields[key] = body[key];
         }
@@ -124,6 +131,16 @@ export const updateMarketingHead = async (req: Request, res: Response) => {
         }
     }
 
+    if (updateFields.percentageId) {
+        if (!mongoose.isValidObjectId(percentageId)) {
+            return ReE(res, { message: "Invalid percentage id" }, httpStatus.BAD_REQUEST);
+        }
+        let checkPer;
+        [err, checkPer] = await toAwait(Percentage.findOne({ _id: percentageId }));
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (!checkPer) return ReE(res, { message: "Percentage is not found for given id" }, httpStatus.NOT_FOUND)
+    }
+
     const [updateErr, updateResult] = await toAwait(
         MarketingHead.updateOne({ _id }, { $set: updateFields })
     );
@@ -139,7 +156,7 @@ export const getByIdMarketingHead = async (req: Request, res: Response) => {
     }
 
     let getMarketing_head;
-    [err, getMarketing_head] = await toAwait(MarketingHead.findOne({ _id: id }));
+    [err, getMarketing_head] = await toAwait(MarketingHead.findOne({ _id: id }).populate("percentageId"));
 
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     if (!getMarketing_head) {
@@ -151,7 +168,7 @@ export const getByIdMarketingHead = async (req: Request, res: Response) => {
 
 export const getAllMarketingHead = async (req: Request, res: Response) => {
     let err, getMarketing_head;
-    [err, getMarketing_head] = await toAwait(MarketingHead.find());
+    [err, getMarketing_head] = await toAwait(MarketingHead.find().populate("percentageId"));
 
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     getMarketing_head = getMarketing_head as IMarketingHead[]
