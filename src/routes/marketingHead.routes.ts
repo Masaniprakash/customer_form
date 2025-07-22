@@ -1,5 +1,5 @@
 import express from "express";
-import { createMarketingHead, deleteMarketingHead, getAllMarketingHead, getByIdMarketingHead, updateMarketingHead } from "../controllers/marketing_head.controller";
+import { createMarketingHead, deleteMarketingHead, getAllMarketingHead, getByIdMarketingHead, updateMarketingHead } from "../controllers/marketingHead.controller";
 const router = express.Router();
 
 router.post("/create", createMarketingHead);

@@ -3,7 +3,8 @@ import customerRoutes from "./routes/customer.routes";
 import projectRoutes from "./routes/project.routes";
 import modRoutes from "./routes/mod.routes";
 import lfcRoutes from "./routes/lfc.routes";
-import marketHead from './routes/marketing_head.routes'
+import marketHead from './routes/marketingHead.routes'
+import marketDetail from './routes/marketDetail.routes'
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -26,5 +27,6 @@ app.use("/api/project", projectRoutes);
 app.use("/api/mod", modRoutes);
 app.use("/api/lfc", lfcRoutes);
 app.use("/api/market/head", marketHead);
+app.use("/api/market/detail", marketDetail);
 
 app.listen(port, () => console.log("Server running on port " + port));

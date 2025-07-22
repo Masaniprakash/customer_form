@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { isNull, isPhone, isValidUUID, IsValidUUIDV4, ReE, ReS, toAwait } from "../services/util.service";
 import httpStatus from "http-status";
-import { MarketingHead } from "../models/marketing_head.model";
-import { IMarketingHead } from "../type/marketing_head";
+import { MarketingHead } from "../models/marketingHead.model";
+import { IMarketingHead } from "../type/marketingHead";
 import mongoose from "mongoose";
 
 export const createMarketingHead = async (req: Request, res: Response) => {
@@ -13,11 +13,11 @@ export const createMarketingHead = async (req: Request, res: Response) => {
     if (inVaildFields.length > 0) {
         return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
     }
-    if(gender){
+    if (gender) {
         gender = gender.toLowerCase();
         let genderList = ["male", "female", "other"];
-        if(!genderList.includes(gender)){
-            return ReE(res, { message: `Invalid gender valid values are (${genderList})!.` }, httpStatus.BAD_REQUEST);   
+        if (!genderList.includes(gender)) {
+            return ReE(res, { message: `Invalid gender valid values are (${genderList})!.` }, httpStatus.BAD_REQUEST);
         }
     }
     if (email) {
@@ -66,15 +66,15 @@ export const updateMarketingHead = async (req: Request, res: Response) => {
         return ReE(res, { message: `Invalid marketing_head _id!` }, httpStatus.BAD_REQUEST);
     }
     let fields = ["name", "email", "gender", "age", "phone", "address", "status"];
-    let inVaildFields = fields.filter(x => isNull(body[x]));
-    if (inVaildFields.length !== 0) {
-        return ReE(res, { message: `Please enter any field to update ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
+    let inVaildFields = fields.filter(x => !isNull(body[x]));
+    if (inVaildFields.length === 0) {
+        return ReE(res, { message: `Please enter any one field to update ${fields}!.` }, httpStatus.BAD_REQUEST);
     }
-    if(gender){
+    if (gender) {
         gender = gender.toLowerCase();
         let genderList = ["male", "female", "other"];
-        if(!genderList.includes(gender)){
-            return ReE(res, { message: `Invalid gender valid values are (${genderList})!.` }, httpStatus.BAD_REQUEST);   
+        if (!genderList.includes(gender)) {
+            return ReE(res, { message: `Invalid gender valid values are (${genderList})!.` }, httpStatus.BAD_REQUEST);
         }
     }
 
