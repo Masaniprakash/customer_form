@@ -1,41 +1,14 @@
-import { DataTypes } from "sequelize";
-import sequelize from "../config/db.config";
-import { v4 as uuidv4 } from "uuid";
+import mongoose, { Mongoose, Schema } from "mongoose";
 
-export const NVT = sequelize.define("NVT", {
-  id: {
-    type: DataTypes.UUID,
-    defaultValue: () => uuidv4(),
-    primaryKey: true,
-  },
-  mod: {
-    type: DataTypes.BOOLEAN,
-  },
-  conversion: {
-    type: DataTypes.STRING,
-  },
-  initialPayment: {
-    type: DataTypes.INTEGER,
-  },
-  emi: {
-    type: DataTypes.INTEGER,
-  },
-  totalPayment: {
-    type: DataTypes.INTEGER,
-  },
-  introducer: {
-    type: DataTypes.STRING,
-  },
-  phoneNumber: {
-    type: DataTypes.STRING,
-  },
-  customerId: {
-    type: DataTypes.STRING,
-  },
-  name: {
-    type: DataTypes.STRING,
-  },
-}, {
-  tableName: "nvts",
-  timestamps: false,
-});
+const nvtSchema = new mongoose.Schema({
+  initPayment: { type: Number, required: true },
+  totalPayment: { type: Number, required: true },
+  emi: { type: Number, required: true },
+  phone: { type: String, required: true },
+  introducerName: { type: String, required: true },
+  needMod: { type: Boolean, default: false },
+  conversion: { type: Boolean, default: false },
+  customer: { type: Schema.Types.ObjectId, ref: 'Customer', required: true }
+}, { timestamps: true });
+
+export const Nvt = mongoose.model("Nvt", nvtSchema);

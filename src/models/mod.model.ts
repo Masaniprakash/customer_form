@@ -1,28 +1,45 @@
-import { DataTypes } from "sequelize";
-import sequelize from "../config/db.config";
-import { v4 as uuidv4 } from "uuid";
+import mongoose, { Schema } from "mongoose";
 
-export const MOD = sequelize.define("MOD", {
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
+const modSchema = new mongoose.Schema({
+  date: {
+    type: String
   },
-  headBy: {
-    type: DataTypes.STRING,
+  siteName: {
+    type: String
   },
-  head: {
-    type: DataTypes.STRING,
+  plotNo: {
+    type: String
   },
-  phoneNumber: {
-    type: DataTypes.STRING,
+  customer: {
+    type: Schema.Types.ObjectId,
+    ref: 'Customer',
+    required: true
   },
-  address: {
-    type: DataTypes.STRING,
+  introducerName: {
+    type: String
+  },
+  introducerPhone: {
+    type: String
+  },
+  directorName: {
+    type: String
+  },
+  directorPhone: {
+    type: String
+  },
+  EDName: {
+    type: String
+  },
+  EDPhone: {
+    type: String
+  },
+  amount: {
+    type: Number
   },
   status: {
-    type: DataTypes.STRING,
+    type: String,
+    default: "active"
   },
-}, {
-  tableName: "mods",
-  timestamps: false,
-});
+}, { timestamps: true });
+
+export const Mod =  mongoose.model('Mod', modSchema); 

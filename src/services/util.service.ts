@@ -1,6 +1,6 @@
 import { to } from 'await-to-js';
-import { Response } from "express"; 
-import { format,  toZonedTime } from 'date-fns-tz';
+import { Response } from "express";
+import { format, toZonedTime } from 'date-fns-tz';
 import { isValidUUIDV4 } from 'is-valid-uuid-v4';
 
 export const IsValidUUIDV4 = (val: string): boolean => {
@@ -60,28 +60,13 @@ export function isEmpty(obj: Object) {
   return Object.entries(obj).length === 0 && obj.constructor === Object;
 }
 
-export function isValidDate(dateString: string) { 
-  const regex = /^\d{4}-\d{2}-\d{2}$/;
-
-  // Check if the dateString matches the regex  
-  if (!regex.test(dateString)) {
-    return {
-      success: false,
-      data: "",
-      message: "Invalid date format, valid date format is YYYY-MM-DD"
-    };
+export const  isValidDate = (dateString: string) => {
+  const regex = /^\d{4}-\d{2}-\d{2}$/; 
+  if (regex.test(dateString)) {
+    return true
+  }else{
+    return false
   }
-
-  const [year, month, day] = dateString.split('-').map(Number);
-
-  const date = new Date(year, month - 1, day);
-
-  // Check if the date is valid
-  return {
-    success: date.getFullYear() === year && date.getMonth() + 1 === month && date.getDate() === day,
-    data: date,
-    message: "Date is valid"
-  };
 }
 
 export const isPhone = (phone: string) => {

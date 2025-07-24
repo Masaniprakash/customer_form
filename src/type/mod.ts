@@ -1,9 +1,14 @@
 export interface IMOD {
-  id?: string; // UUID
-  name: string;
-  headBy: string;
-  head: string;
-  phoneNumber: string;
-  address: string;
+  date: string;
+  siteName: string;
+  plotNo: string;
+  customer: string;
+  introducerName: string;
+  introducerPhone: string;
+  directorName: string;
+  directorPhone: string;
+  EDName: string;
+  EDPhone: string;
+  amount: number;
   status: string;
 }
