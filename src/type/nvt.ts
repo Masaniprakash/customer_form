@@ -1,12 +1,11 @@
 export interface INVT {
   id?: string; // UUID
-  mod: boolean;
+  needMod: boolean;
   conversion: string;
   initialPayment: number;
-  emi: number;
   totalPayment: number;
-  introducer: string;
-  phoneNumber: string;
-  customerId: string;
-  name: string;
+  emi: number;
+  introducerName: string;
+  customer: string;
+  mod: string
 }

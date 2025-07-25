@@ -6,6 +6,7 @@ import lfcRoutes from "./routes/lfc.routes";
 import marketHead from './routes/marketingHead.routes'
 import marketDetail from './routes/marketDetail.routes'
 import mod from './routes/mod.routes'
+import nvt from './routes/nvt.routes'
 import percentage from './routes/percentage.routes'
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -31,6 +32,7 @@ app.use("/api/lfc", lfcRoutes);
 app.use("/api/market/head", marketHead);
 app.use("/api/market/detail", marketDetail);
 app.use("/api/mod", mod);
+app.use("/api/nvt", nvt);
 app.use("/api/percentage", percentage);
 
 app.listen(port, () => console.log("Server running on port " + port));

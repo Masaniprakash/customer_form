@@ -1,4 +1,5 @@
 export interface IMOD {
+  _id:string
   date: string;
   siteName: string;
   plotNo: string;

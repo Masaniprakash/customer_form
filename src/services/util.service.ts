@@ -57,7 +57,10 @@ export function isNull(field: string | null) {
 }
 
 export function isEmpty(obj: Object) {
-  return Object.entries(obj).length === 0 && obj.constructor === Object;
+  if(obj === undefined){
+    return true
+  }
+  return Object.entries(obj).length === 0 && obj.constructor === Object;//688263a82de1943da23aff47
 }
 
 export const  isValidDate = (dateString: string) => {
