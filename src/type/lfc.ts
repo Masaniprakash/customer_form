@@ -1,22 +1,18 @@
+import { Types } from "mongoose";
+
 export interface ILFC {
-  id?: string; // UUID
-  customer_id: string; // UUID
-  conversion: boolean;
-  conversionCustomerId: string;
-  registration: string;
-  needMod: boolean;
-  landDetails: {
-    sayFe: string;
-    sayTask: string;
-    plotNo: string;
-  };
-  totalPayments: {
-    payout: number;
-    fustral: number;
-    ent: number;
-  };
+  _id?: string;
+  customer: string;
   introductionName: string;
-  pl: string;
-  customerId: string;
-  customerName: string;
+  emi: number;
+  inital: number;
+  totalSqFt: string;
+  sqFtAmount: string;
+  plotNo: string;
+  registration: string;
+  conversion: boolean;
+  needMod: boolean;
+  mod: Types.ObjectId;
+  nvt: Types.ObjectId[] | string[]; 
 }
+

@@ -1,38 +1,40 @@
 import mongoose from "mongoose";
 
 const lfcSchema = new mongoose.Schema({
-  customerId: {
+  customer: {
     type: mongoose.Schema.Types.String,
-    ref: "Customer", // reference to another model
+    ref: "Customer",
+  },
+  introductionName: {
+    type: String
+  },
+  emi: { type: Number, default: 0 },
+  inital: { type: Number, default: 0 },
+  totalSqFt: { type: String },
+  sqFtAmount: { type: String },
+  plotNo: { type: String },
+  registration: {
+    type: String,
+    required: true
   },
   conversion: {
     type: Boolean,
-    required: true
-  },
-  registration: {
-    type: String,
     required: true
   },
   needMod: {
     type: Boolean,
     required: true
   },
-  landDetails: {
-    sayFe: { type: String },
-    sayTask: { type: String },
-    plotNo: { type: String }
+  mod: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Mod"
   },
-  totalPayments: {
-    payout: { type: Number, default: 0 },
-    fustral: { type: Number, default: 0 },
-    ent: { type: Number, default: 0 }
-  },
-  introductionName: {
-    type: String
-  },
-  pl: {
-    type: String
-  }
+  nvt: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Nvt"
+    }
+  ]
 }, { timestamps: true });
 
 export const Lfc = mongoose.model("Lfc", lfcSchema);
