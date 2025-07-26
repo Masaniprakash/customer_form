@@ -6,6 +6,6 @@ router.post("/create", createLfc);
 router.put("/update", updateLfc);
 router.get("/get/all", getAllLfc);
 router.get("/get/:id", getByIdLfc);
-router.delete("/:id", deleteLfc);
+router.delete("/delete", deleteLfc);
 
 export default router;

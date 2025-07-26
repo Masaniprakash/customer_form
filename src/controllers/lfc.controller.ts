@@ -16,7 +16,7 @@ export const createLfc = async (req: Request, res: Response) => {
     return ReE(res, "lfc is required", httpStatus.BAD_REQUEST);
   }
   let { customer, introductionName, emi, inital, totalSqFt, sqFtAmount, plotNo, registration, conversion, needMod, nvt } = lfc;
-  let fields = ["customer", "introductionName", "emi", "inital", "totalSqFt", "sqFtAmount", "plotNo", "registration", "conversion", "needMod", "nvt"];
+  let fields = ["customer", "introductionName", "emi", "inital", "totalSqFt", "sqFtAmount", "plotNo", "registration", "conversion", "needMod"];
   let inVaildFields = fields.filter(x => isNull(lfc[x]));
   if (inVaildFields.length > 0) {
     return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
@@ -24,24 +24,26 @@ export const createLfc = async (req: Request, res: Response) => {
   if (typeof needMod !== 'boolean') {
     return ReE(res, "needMod must be boolean", httpStatus.BAD_REQUEST);
   }
-  if (!Array.isArray(nvt)) {
-    return ReE(res, "nvt must be array", httpStatus.BAD_REQUEST);
-  }
-  if (nvt.length === 0) {
-    return ReE(res, "Please select at least one nvt", httpStatus.BAD_REQUEST);
-  }
-  for (let index = 0; index < nvt.length; index++) {
-    const element = nvt[index];
-    if (!mongoose.isValidObjectId(element)) {
-      return ReE(res, "nvt invalid id : " + element, httpStatus.BAD_REQUEST);
+  if(nvt){
+    if (!Array.isArray(nvt)) {
+      return ReE(res, "nvt must be array", httpStatus.BAD_REQUEST);
     }
-    let checkNvt;
-    [err, checkNvt] = await toAwait(Nvt.findById(element));
-    if (err) {
-      return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    if (nvt.length === 0) {
+      return ReE(res, "Please select at least one nvt", httpStatus.BAD_REQUEST);
     }
-    if (!checkNvt) {
-      return ReE(res, "nvt not found given id: " + element, httpStatus.NOT_FOUND);
+    for (let index = 0; index < nvt.length; index++) {
+      const element = nvt[index];
+      if (!mongoose.isValidObjectId(element)) {
+        return ReE(res, "nvt invalid id : " + element, httpStatus.BAD_REQUEST);
+      }
+      let checkNvt;
+      [err, checkNvt] = await toAwait(Nvt.findById(element));
+      if (err) {
+        return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+      }
+      if (!checkNvt) {
+        return ReE(res, "nvt not found given id: " + element, httpStatus.NOT_FOUND);
+      }
     }
   }
   if (!customer) {
@@ -125,8 +127,10 @@ export const updateLfc = async (req: Request, res: Response) => {
     if (!Array.isArray(nvt)) {
       return ReE(res, "nvt must be array", httpStatus.BAD_REQUEST);
     }
-    if (nvt.length === 0) {
-      return ReE(res, "Please select at least one nvt", httpStatus.BAD_REQUEST);
+    if(checkLfc.nvt && checkLfc.nvt.length === 0){
+      if (nvt.length === 0) {
+        return ReE(res, "Please select at least one nvt", httpStatus.BAD_REQUEST);
+      }
     }
     for (let index = 0; index < nvt.length; index++) {
       const element = nvt[index];
