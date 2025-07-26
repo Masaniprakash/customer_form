@@ -8,8 +8,8 @@ import { MarketingHead } from "../models/marketingHead.model";
 
 export const createMarketDetail = async (req: Request, res: Response) => {
     let body = req.body, err;
-    let { headBy, phone, address, status } = body;
-    let fields = ["headBy", "phone", "address", "status"];
+    let { headBy, phone, address, status, name } = body;
+    let fields = ["headBy", "phone", "address", "status","name"];
     let inVaildFields = fields.filter(x => isNull(body[x]));
     if (inVaildFields.length > 0) {
         return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
@@ -46,8 +46,8 @@ export const createMarketDetail = async (req: Request, res: Response) => {
 export const updateMarketDetail = async (req: Request, res: Response) => {
     const body = req.body;
     let err: any;
-    let { _id, headBy, phone, address, status } = body;
-    let fields = ["headBy", "phone", "address", "status"];
+    let { _id, headBy, phone, address, status, name } = body;
+    let fields = ["headBy", "phone", "address", "status", 'name'];
     let inVaildFields = fields.filter(x => !isNull(body[x]));
     if (inVaildFields.length === 0) {
         return ReE(res, { message: `Please enter any one field to update ${fields}!.` }, httpStatus.BAD_REQUEST);

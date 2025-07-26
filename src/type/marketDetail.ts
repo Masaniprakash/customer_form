@@ -1,7 +1,8 @@
 import { Types } from 'mongoose';
 
 export interface IMarketDetail {
-  headBy: Types.ObjectId; // Reference to MarketingHead
+  name: string;
+  headBy: Types.ObjectId;
   phone: string;
   address: string;
   status: string;

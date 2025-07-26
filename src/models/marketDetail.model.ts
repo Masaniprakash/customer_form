@@ -3,6 +3,7 @@ import { IMarketDetail } from '../type/marketDetail';
 
 const MarketDetailSchema: Schema = new Schema(
     {
+        name:{type:String},
         headBy: { type: Schema.Types.ObjectId, ref: 'MarketingHead', required: true }, // 👈 Reference
         phone: { type: String, required: true },
         address: { type: String, required: true },
