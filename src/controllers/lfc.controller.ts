@@ -127,11 +127,11 @@ export const updateLfc = async (req: Request, res: Response) => {
     if (!Array.isArray(nvt)) {
       return ReE(res, "nvt must be array", httpStatus.BAD_REQUEST);
     }
-    if(checkLfc.nvt && checkLfc.nvt.length === 0){
-      if (nvt.length === 0) {
-        return ReE(res, "Please select at least one nvt", httpStatus.BAD_REQUEST);
-      }
-    }
+    // if(checkLfc.nvt && checkLfc.nvt.length === 0){
+    //   if (nvt.length === 0) {
+    //     return ReE(res, "Please select at least one nvt", httpStatus.BAD_REQUEST);
+    //   }
+    // }
     for (let index = 0; index < nvt.length; index++) {
       const element = nvt[index];
       if (!mongoose.isValidObjectId(element)) {
