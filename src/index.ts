@@ -7,6 +7,9 @@ import marketHead from './routes/marketingHead.routes'
 import marketDetail from './routes/marketDetail.routes'
 import mod from './routes/mod.routes'
 import nvt from './routes/nvt.routes'
+import role from './routes/role.routes'
+import menu from './routes/menu.routes'
+import roleMenu from './routes/roleMenu.routes'
 import percentage from './routes/percentage.routes'
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -34,5 +37,8 @@ app.use("/api/market/detail", marketDetail);
 app.use("/api/mod", mod);
 app.use("/api/nvt", nvt);
 app.use("/api/percentage", percentage);
+app.use("/api/role", role);
+app.use("/api/menu", menu);
+app.use("/api/role/menu", roleMenu);
 
 app.listen(port, () => console.log("Server running on port " + port));
