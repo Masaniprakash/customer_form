@@ -11,6 +11,7 @@ import role from './routes/role.routes'
 import menu from './routes/menu.routes'
 import roleMenu from './routes/roleMenu.routes'
 import percentage from './routes/percentage.routes'
+import user from './routes/user.routes'
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -40,5 +41,6 @@ app.use("/api/percentage", percentage);
 app.use("/api/role", role);
 app.use("/api/menu", menu);
 app.use("/api/role/menu", roleMenu);
+app.use("/api/user", user);
 
 app.listen(port, () => console.log("Server running on port " + port));
