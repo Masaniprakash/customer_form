@@ -5,12 +5,12 @@ import isAdmin from "../middleware/admin";
 const router = express.Router();
 
 router.post("/admin/create",createAdminUser);
-router.post("/create",[verifyToken,isAdmin], createUserByAdmin);
+router.post("/create", createUserByAdmin);
 router.post("/login", login);
-router.put("/update",[verifyToken,isAdmin], updateUserByAdmin);
+router.put("/update", updateUserByAdmin);
 router.get("/get/by/token",verifyToken, getUserByToken);
 router.get("/get/all", getAllUser);
 router.get("/get/:id", getByIdUser);
-router.delete("/delete",[verifyToken,isAdmin], deleteUser);
+router.delete("/delete" , deleteUser);
 
 export default router;

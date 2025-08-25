@@ -4,10 +4,10 @@ import verifyToken from "../middleware/verfiyToken";
 import isAdmin from "../middleware/admin";
 const router = express.Router();
 
-router.post("/create",[verifyToken,isAdmin], createRole);
-router.put("/update",[verifyToken,isAdmin], updateRole);
+router.post("/create" , createRole);
+router.put("/update" , updateRole);
 router.get("/get/all", getAllRole);
 router.get("/get/:id", getByIdRole);
-router.delete("/delete",[verifyToken,isAdmin], deleteRole);
+router.delete("/delete" , deleteRole);
 
 export default router;
