@@ -80,7 +80,7 @@ export const updateRole = async (req: Request, res: Response) => {
     if (updateFields.name) {
         updateFields.name = updateFields.name.toLowerCase().trim();
         let checkRole;
-        [err, checkRole] = await toAwait(Role.findOne({ name: updateFields.name, _id:{$ne:_id} }))
+        [err, checkRole] = await toAwait(Role.findOne({ name: updateFields.name, _id: { $ne: _id } }))
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
         if (checkRole) return ReE(res, { message: "Role already exist for given name" }, httpStatus.BAD_REQUEST);
     }
@@ -127,7 +127,29 @@ export const getAllRole = async (req: Request, res: Response) => {
             option.status = status
         }
     }
-    [err, getRole] = await toAwait(Role.find(option));
+    [err, getRole] = await toAwait(
+        Role.aggregate([
+            { $match: option },
+            {
+                $lookup: {
+                    from: "users",              // collection name in MongoDB
+                    localField: "_id",          // Role._id
+                    foreignField: "role",       // User.role
+                    as: "users"
+                }
+            },
+            {
+                $addFields: {
+                    userCount: { $size: "$users" } // number of users in this role
+                }
+            },
+            {
+                $project: {
+                    users: 0 // hide user list, only keep count
+                }
+            }
+        ])
+    );
 
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     getRole = getRole as IRole[]
