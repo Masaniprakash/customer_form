@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { isNull, isPhone, isValidUUID, IsValidUUIDV4, ReE, ReS, toAwait } from "../services/util.service";
+import { isNull, ReE, ReS, toAwait } from "../services/util.service";
 import httpStatus from "http-status";
 import { Role } from "../models/role.model";
 import { IRole } from "../type/role";
