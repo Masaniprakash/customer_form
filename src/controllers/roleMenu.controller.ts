@@ -7,6 +7,8 @@ import { IMenu } from "../type/menu";
 import { Role } from "../models/role.model";
 import { Menu } from "../models/menu.model";
 import { RoleMenu } from "../models/roleMenu.model";
+import CustomRequest from "../type/customRequest";
+import { checkFormatOfMultiMenuInBody } from "./common";
 
 export const createRoleMenu = async (req: Request, res: Response) => {
 
@@ -297,5 +299,228 @@ export const deleteRoleMenu = async (req: Request, res: Response) => {
     [err, deleteUser] = await toAwait(RoleMenu.deleteOne({ _id: _id }));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR)
     ReS(res, { message: "role menu deleted" }, httpStatus.OK)
+
+}
+
+export const createRoleMultiMenuMap = async (req: CustomRequest, res: Response) => {
+
+  let err, body = req.body;
+
+//   if (!user || !user.isAdmin) {
+//     return ReE(res, { message: "Unauthorized your not do this" }, httpStatus.UNAUTHORIZED);
+//   }
+
+  let fields = ["roleId", "menuIds"]
+
+  let inVaildFields = fields.filter(x => isNull(body[x]));
+
+  if (inVaildFields.length > 0) {
+    return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
+  }
+
+  let { roleId, menuIds } = body;
+
+  if (isNull(roleId) || !mongoose.isValidObjectId(roleId)) {
+    return ReE(res, { message: "Invalid role id" }, httpStatus.BAD_REQUEST);
+  }
+
+  let checkRole;
+  [err, checkRole] = await toAwait(Role.findById(roleId));
+
+  if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+  if (!checkRole) {
+    return ReE(res, { message: "Role not found for given role id" }, httpStatus.NOT_FOUND);
+  }
+
+  let validFormat = await checkFormatOfMultiMenuInBody(menuIds);
+
+  if (!validFormat) {
+    return ReE(res, { message: `Invalid format of menuIds. valid menuIds:[{menuId:"passid",create:boolean,update:boolean,read:boolean,delete:boolean}].` }, httpStatus.BAD_REQUEST);
+  }
+
+  for (let index = 0; index < menuIds.length; index++) {
+    const element = menuIds[index];
+
+    if (!element.menuId) {
+      return ReE(res, { message: `Invalid menuId in menuIds array inside menuId at ${index + 1} ` }, httpStatus.BAD_REQUEST);
+    }
+
+    if (!mongoose.isValidObjectId) {
+      return ReE(res, { message: `Invalid menuId in menuIds array inside menuId at ${index + 1} ` }, httpStatus.BAD_REQUEST);
+    }
+
+    
+    let checkMenu;
+    [err, checkMenu] = await toAwait(Menu.findById(element.menuId));
+    
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    
+    if (!checkMenu) {
+      return ReE(res, { message: `Menu not found for menuId ${element.menuId} in menuIds array inside menuId at ${index + 1} ` }, httpStatus.NOT_FOUND);
+    }
+
+    checkMenu =  checkMenu as IMenu;
+    
+    //let check if create or update or delete is true means read must be true
+    if (element.create || element.update || element.delete) {
+      if (!element.read) {
+        return ReE(res, { message: `create, update or delete any one is true means read must be true, for menuId ${checkMenu.name} at ${index + 1}` }, httpStatus.BAD_REQUEST);
+      }
+    };
+
+    let checkRoleMenu;
+    [err, checkRoleMenu] = await toAwait(RoleMenu.findOne({ role_id: roleId, menu_id: element.menuId }))
+
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    if (checkRoleMenu) {
+      return ReE(res, { message: `Role menu already exist for roleId ${roleId} and menuId ${element.menuId}` }, httpStatus.CONFLICT);
+    }
+
+  }
+
+  for (let index = 0; index < menuIds.length; index++) {
+    const element = menuIds[index];
+    
+    let createRoleMenu;
+    [err, createRoleMenu] = await toAwait(RoleMenu.create({
+      role_id: roleId,
+      menu_id: element.menuId,
+      read: element.read,
+      create: element.create,
+      update: element.update,
+      delete: element.delete
+    }))
+
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    if (!createRoleMenu) {
+      return ReE(res, { message: `Failed to create role menu role id is ${roleId} menu id ${element.menuId}` }, httpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+  }
+
+  ReS(res, { message: "Role menu map created successfully" }, httpStatus.OK)
+
+}
+
+export const updateRoleMultiMenuMap = async (req: CustomRequest, res: Response) => {
+
+  let err, body = req.body;
+
+//   if (!user || !user.isAdmin) {
+//     return ReE(res, { message: "Unauthorized your not do this" }, httpStatus.UNAUTHORIZED);
+//   }
+
+  let fields = ["roleId", "menuIds"]
+
+  let inVaildFields = fields.filter(x => isNull(body[x]));
+
+  if (inVaildFields.length > 0) {
+    return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
+  }
+
+  let { roleId, menuIds } = body;
+
+  if (isNull(roleId) || !mongoose.isValidObjectId(roleId)) {
+    return ReE(res, { message: "Invalid role id" }, httpStatus.BAD_REQUEST);
+  }
+
+  let checkRole;
+  [err, checkRole] = await toAwait(Role.findById(roleId));
+
+  if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+  if (!checkRole) {
+    return ReE(res, { message: "Role not found for given role id" }, httpStatus.NOT_FOUND);
+  }
+
+  let validFormat = checkFormatOfMultiMenuInBody(menuIds);
+
+  if (!validFormat) {
+    return ReE(res, { message: `Invalid format of menuIds. valid [{menuId:"passid",create:boolean,update:boolean,get:boolean,delete:boolean}].` }, httpStatus.BAD_REQUEST);
+  }
+
+  for (let index = 0; index < menuIds.length; index++) {
+    const element = menuIds[index];
+
+    if (!element.menuId) {
+      return ReE(res, { message: `Invalid menuId in menuIds array inside menuId at ${index + 1} ` }, httpStatus.BAD_REQUEST);
+    }
+
+    if (!mongoose.isValidObjectId) {
+      return ReE(res, { message: `Invalid menuId in menuIds array inside menuId at ${index + 1} ` }, httpStatus.BAD_REQUEST);
+    }
+
+    
+    let checkMenu;
+    [err, checkMenu] = await toAwait(Menu.findById(element.menuId));
+    
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    
+    if (!checkMenu) {
+      return ReE(res, { message: `Menu not found for menuId ${element.menuId} in menuIds array inside menuId at ${index + 1} ` }, httpStatus.NOT_FOUND);
+    }
+
+    checkMenu = checkMenu as IMenu;
+
+    //let check if create or update or delete is true means read must be true
+    if (element.create || element.update || element.delete) {
+      if (!element.read) {
+        return ReE(res, { message: `create, update or delete any one is true means read must be true, for menuId ${checkMenu.name} at ${index + 1}` }, httpStatus.BAD_REQUEST);
+      }
+    };
+    
+  }
+  
+  for (let index = 0; index < menuIds.length; index++) {
+    const element = menuIds[index];
+
+    let checkRoleMenu;
+    [err, checkRoleMenu] = await toAwait(RoleMenu.findOne({ role_id: roleId, menu_id: element.menuId }))
+
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    if (!checkRoleMenu) {
+
+      let createRole;
+      [err, createRole] = await toAwait(RoleMenu.create({
+        role_id: roleId,
+        menu_id: element.menuId,
+        read: element.read,
+        create: element.create,
+        update: element.update,
+        delete: element.delete
+      }))
+
+      if(err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+      if (!createRole) {
+        return ReE(res, { message: `Failed to create role menu role id is ${roleId} menu id ${element.menuId}` }, httpStatus.INTERNAL_SERVER_ERROR);
+      }
+    
+    }else{
+
+      checkRoleMenu = checkRoleMenu as IRoleMenu;
+  
+      let update;
+      [err, update] = await toAwait(RoleMenu.updateOne(
+        { role_id: roleId, menu_id: element.menuId },
+        { create: element.create, read: element.read, update: element.update, delete: element.delete },
+        { new: true }
+      ))
+  
+      if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+  
+      if (!update) {
+        return ReE(res, { message: `Failed to update role menu role id is ${roleId} menu id ${element.menuId}` }, httpStatus.INTERNAL_SERVER_ERROR);
+      }
+      
+    }
+      
+  }
+
+  ReS(res, { message: "Role menu map updated successfully" }, httpStatus.OK)
 
 }
