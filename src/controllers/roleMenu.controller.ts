@@ -9,6 +9,7 @@ import { Menu } from "../models/menu.model";
 import { RoleMenu } from "../models/roleMenu.model";
 import CustomRequest from "../type/customRequest";
 import { checkFormatOfMultiMenuInBody } from "./common";
+import { IRole } from "../type/role";
 
 export const createRoleMenu = async (req: Request, res: Response) => {
 
@@ -333,6 +334,8 @@ export const createRoleMultiMenuMap = async (req: CustomRequest, res: Response) 
     return ReE(res, { message: "Role not found for given role id" }, httpStatus.NOT_FOUND);
   }
 
+  checkRole = checkRole as IRole;
+
   let validFormat = await checkFormatOfMultiMenuInBody(menuIds);
 
   if (!validFormat) {
@@ -370,12 +373,12 @@ export const createRoleMultiMenuMap = async (req: CustomRequest, res: Response) 
     };
 
     let checkRoleMenu;
-    [err, checkRoleMenu] = await toAwait(RoleMenu.findOne({ role_id: roleId, menu_id: element.menuId }))
+    [err, checkRoleMenu] = await toAwait(RoleMenu.findOne({ roleId: roleId, menuId: element.menuId }))
 
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
     if (checkRoleMenu) {
-      return ReE(res, { message: `Role menu already exist for roleId ${roleId} and menuId ${element.menuId}` }, httpStatus.CONFLICT);
+      return ReE(res, { message: `Role menu already mapped for role: (${checkRole.name}) and menu: (${checkMenu.name})` }, httpStatus.CONFLICT);
     }
 
   }
@@ -385,8 +388,8 @@ export const createRoleMultiMenuMap = async (req: CustomRequest, res: Response) 
     
     let createRoleMenu;
     [err, createRoleMenu] = await toAwait(RoleMenu.create({
-      role_id: roleId,
-      menu_id: element.menuId,
+      roleId: roleId,
+      menuId: element.menuId,
       read: element.read,
       create: element.create,
       update: element.update,
@@ -478,7 +481,7 @@ export const updateRoleMultiMenuMap = async (req: CustomRequest, res: Response) 
     const element = menuIds[index];
 
     let checkRoleMenu;
-    [err, checkRoleMenu] = await toAwait(RoleMenu.findOne({ role_id: roleId, menu_id: element.menuId }))
+    [err, checkRoleMenu] = await toAwait(RoleMenu.findOne({ roleId: roleId, menuId: element.menuId }))
 
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
@@ -486,8 +489,8 @@ export const updateRoleMultiMenuMap = async (req: CustomRequest, res: Response) 
 
       let createRole;
       [err, createRole] = await toAwait(RoleMenu.create({
-        role_id: roleId,
-        menu_id: element.menuId,
+        roleId: roleId,
+        menuId: element.menuId,
         read: element.read,
         create: element.create,
         update: element.update,
@@ -506,7 +509,7 @@ export const updateRoleMultiMenuMap = async (req: CustomRequest, res: Response) 
   
       let update;
       [err, update] = await toAwait(RoleMenu.updateOne(
-        { role_id: roleId, menu_id: element.menuId },
+        { roleId: roleId, menuId: element.menuId },
         { create: element.create, read: element.read, update: element.update, delete: element.delete },
         { new: true }
       ))

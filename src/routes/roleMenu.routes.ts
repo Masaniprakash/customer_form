@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post("/create" , createRoleMenu);
 router.post("/multi/create" , createRoleMultiMenuMap);
-router.post("/multi/update" , updateRoleMultiMenuMap);
+router.put("/multi/update" , updateRoleMultiMenuMap);
 router.put("/update" , updateRoleMenu);
 router.get("/get/all", getAllRoleMenu);
 router.get("/get/:id", getByIdRoleMenu);
