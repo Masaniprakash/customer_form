@@ -11,15 +11,21 @@ import role from './routes/role.routes'
 import menu from './routes/menu.routes'
 import roleMenu from './routes/roleMenu.routes'
 import percentage from './routes/percentage.routes'
+import common from './routes/common.routes'
 import user from './routes/user.routes'
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import path from "path";
+import plotBookingFormRoutes from "./routes/plotBookingForm.routes";
+import lifeSacingRoutes from "./routes/lifeSaving.routes";
 
 const app = express();
 app.use(express.json());
 dotenv.config();
 app.use(cors());
+
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 const port = process.env.PORT || 5005
 const db = process.env.DBURL || "mongodb://localhost:27017/customer"
@@ -42,5 +48,8 @@ app.use("/api/role", role);
 app.use("/api/menu", menu);
 app.use("/api/role/menu", roleMenu);
 app.use("/api/user", user);
+app.use("/api/common", common);
+app.use("/api/plot/booking", plotBookingFormRoutes);
+app.use("/api/life/saving", lifeSacingRoutes);
 
 app.listen(port, () => console.log("Server running on port " + port));
