@@ -17,6 +17,12 @@ export const createPlotBookingForm = async (req: Request, res: Response) => {
         return ReE(res, { message: `This plotBookingForm already exists.` }, httpStatus.BAD_REQUEST);
     }
 
+    if(req.file){
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        const photo = `${baseUrl}/${(req.file as any).path.replace(/\\/g, "/")}`;
+        body = { ...body, photo };
+    }
+
     // create new record
     let plotBookingForm;
     [err, plotBookingForm] = await toAwait(plotBookingFormModel.create(body));

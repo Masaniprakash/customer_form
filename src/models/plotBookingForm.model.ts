@@ -45,7 +45,9 @@ const PlotBookingFormSchema: Schema = new Schema(
         diamountDirectorPhone: { type: String, trim: true },
 
         modeOfPayment: { type: String, trim: true },
-        paymentRefNo: { type: String, trim: true }
+        paymentRefNo: { type: String, trim: true },
+
+        photo: { type: String, trim: true }
     },
     {
         timestamps: true,
