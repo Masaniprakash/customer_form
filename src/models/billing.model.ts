@@ -1,0 +1,87 @@
+import mongoose, { Schema } from "mongoose";
+import { IBilling } from "../type/billing";
+
+const BillingSchema: Schema = new Schema<IBilling>(
+  {
+    mobileNo: {
+      type: String,
+    //   required: true,
+    //   trim: true,
+    },
+    customer: {
+      type: Schema.Types.ObjectId,
+      ref: "Customer",
+    //   required: true,
+    },
+    transactionType: {
+      type: String,
+      enum: ["EMI Receipt", "Other"],
+    //   required: true,
+    },
+    customerName: {
+      type: String,
+    //   required: true,
+    //   trim: true,
+    },
+    billingId: {
+      type: String,
+    //   required: true,
+    //   unique: true, // e.g., 6735:2-Sep
+    },
+    balanceAmount: {
+      type: Number,
+    //   required: true,
+    },
+    modeOfPayment: {
+      type: String,
+      enum: ["Cash", "Card", "Online"],
+    //   required: true,
+    },
+    cardNo: {
+      type: String,
+    //   required: function (this: IBilling) {
+    //     return this.modeOfPayment === "card";
+    //   },
+    },
+    cardHolderName: {
+      type: String,
+    //   required: function (this: IBilling) {
+    //     return this.modeOfPayment === "card";
+    //   },
+    },
+    paymentDate: {
+      type: Date,
+      required: true,
+    },
+    emiNo: {
+      type: Number,
+    //   required: true,
+    },
+    amountPaid: {
+      type: Number,
+    //   required: true,
+    },
+    saleType: {
+      type: String,
+      enum: ["Plot", "Flat", "Villa"],
+    //   required: true,
+    },
+    introducer: {
+      type: String, // Coming from marketer API
+    //   required: true,
+    },
+    status: {
+      type: String,
+      enum: ["Enquiry", "Blocked"],
+    },
+    remarks: {
+      type: String,
+    },
+    editDeleteReason: {
+      type: String,
+    },
+  },
+  { timestamps: true }
+);
+
+export const Billing = mongoose.model<IBilling>("Billing", BillingSchema);

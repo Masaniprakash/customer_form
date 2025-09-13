@@ -25,8 +25,8 @@ const GeneralSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ["enquired", "blocked", "vacant"],
-        required: true,
+        enum: ["Enquired", "Blocked", "Vacant"],
+        // required: true,
     },
     loan: {
         type: String
