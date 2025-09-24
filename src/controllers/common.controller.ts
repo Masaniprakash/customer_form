@@ -12,39 +12,40 @@ import { IGeneral } from "../type/general";
 import { IPlot } from "../type/plot";
 import { IBilling } from "../type/billing";
 import { IFlat } from "../type/flat";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { s3 } from "../services/digitalOceanConfig";
 
-export const commonCreate = async (req: Request, res: Response) => {
 
+export const uploadImages = async (req: Request, res: Response) => {
     try {
-        let body = req.body;
-        const { marketerName, paymentTerms, emiAmount, noOfInstallments, status, loan, offered, editDeleteReason, customerId } = body;
-        const baseUrl = `${req.protocol}://${req.get("host")}`;
-        const saleDeedDoc = req.files && (req.files as any)["saleDeedDoc"]
-            ? `${baseUrl}/${(req.files as any)["saleDeedDoc"][0].path.replace(/\\/g, "/")}`
-            : undefined;
-        const motherDoc = req.files && (req.files as any)["motherDoc"]
-            ? `${baseUrl}/${(req.files as any)["motherDoc"][0].path.replace(/\\/g, "/")}`
-            : undefined;
-        const general = await General.create({
-            marketerName,
-            paymentTerms,
-            emiAmount,
-            noOfInstallments,
-            status: status.toLowerCase(),
-            loan,
-            offered,
-            editDeleteReason,
-            customerId,
-            saleDeedDoc,
-            motherDoc,
-        });
-
-        return res.status(201).json({ success: true, data: general });
-    } catch (err: any) {
-        return res.status(500).json({ success: false, message: err.message });
+        const BUCKET = process.env.DO_SPACES_BUCKET;
+        const CDN_URL = process.env.DO_SPACES_CDN;
+        if(!BUCKET || !CDN_URL) {
+            return ReE(res, { message: "Missing environment variables for Digital Ocean" }, httpStatus.INTERNAL_SERVER_ERROR);
+        }
+        const files = req.files as Express.Multer.File[];
+        if (!files || files.length === 0) {
+            return ReE(res, { message: "please upload at least one files" }, httpStatus.BAD_REQUEST);
+        }
+        const urls: string[] = [];
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileName = `uploads/${Date.now()}_${file.originalname?.replace(/\s+/g, '')}`;
+            await s3.send(
+            new PutObjectCommand({
+                Bucket: BUCKET,
+                Key: fileName,
+                Body: file.buffer,
+                ACL: "public-read",
+                ContentType: file.mimetype,
+            }));
+            urls.push(`${CDN_URL}/${fileName}`);
+        }
+        return ReS(res, { message: "files uploaded successfully", data: urls }, httpStatus.OK);
+    } catch (error) {
+        return ReE(res, error, httpStatus.INTERNAL_SERVER_ERROR);
     }
-
-}
+};
 
 export const createCommonData = async (req: Request, res: Response) => {
     let body = req.body, err;
@@ -116,14 +117,14 @@ export const createCommonData = async (req: Request, res: Response) => {
             billing.saleType = billing.saleType === "plot" ? "Plot" : billing.saleType === "flat" ? "Flat" : "Villa";
         }
 
-        if (billing.transactionType) {
-            let validValue = ["emi receipt", "other"]
-            billing.transactionType = billing.transactionType.toLowerCase();
-            if (!validValue.includes(billing.transactionType)) {
-                return ReE(res, { message: `transaction type value is invalid valid value are (${validValue})` }, httpStatus.BAD_REQUEST);
-            }
-            billing.transactionType = billing.transactionType === "emi receipt" ? "EMI Receipt" : "Other";
-        }
+        // if (billing.transactionType) {
+        //     let validValue = ["emi receipt", "other"]
+        //     billing.transactionType = billing.transactionType.toLowerCase();
+        //     if (!validValue.includes(billing.transactionType)) {
+        //         return ReE(res, { message: `transaction type value is invalid valid value are (${validValue})` }, httpStatus.BAD_REQUEST);
+        //     }
+        //     billing.transactionType = billing.transactionType === "emi receipt" ? "EMI Receipt" : "Other";
+        // }
 
     }
 
@@ -132,9 +133,35 @@ export const createCommonData = async (req: Request, res: Response) => {
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
         if (checkAlreadyExist) return ReE(res, { message: `general already exist based on given all details` }, httpStatus.BAD_REQUEST);
         await tryCreate(General, general, "general");
+
+        //if general.noOfInstallments no of installments then create emi receipt
+        if(general.noOfInstallments){
+            for (let index = 0; index < general.noOfInstallments; index++) {
+                //  customer: {
+                //         type: mongoose.Schema.Types.String,
+                //         ref: "Customer",
+                //     },
+                //     emiNo: { type: Number, required: true },
+                //     date: { type: Date, required: true },
+                //     emiAmt: { type: Number, required: true },
+                //     paidDate: { type: Date },
+                //     paidAmt: { type: Number },
+                let emi={
+                    customer: customerId,
+                    emiNo: index + 1,
+                    date: new Date(),
+                    emiAmt: general.emiAmt
+                }
+                await tryCreate(Emi, emi, "emi");
+            }
+        }
+        
+
+        //if success then send we create emi receipt
     }
 
     if (billing) {
+        billing.transactionType = "EMI Receipt"
         let checkAlreadyExist = await Billing.findOne(billing);
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
         if (checkAlreadyExist) return ReE(res, { message: `billing already exist based on given all details` }, httpStatus.BAD_REQUEST);
@@ -201,6 +228,7 @@ export const UpdateCommonData = async (req: Request, res: Response) => {
         if (!mongoose.isValidObjectId(general._id)) {
             return ReE(res, { message: "general _id is invalid" }, httpStatus.BAD_REQUEST);
         }
+
 
         let checkAlreadyExist = await General.findOne({ _id: general._id });
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
@@ -442,35 +470,3 @@ export const getByIdFlat = async (req: Request, res: Response) => {
     }
     return ReS(res, { data: getFlat }, httpStatus.OK);
 }
-
-export const uploadImages = (req: Request, res: Response) => {
-    const files = req.files as Express.Multer.File[];
-
-    if (!files || files.length === 0) {
-        return res.status(400).json({ message: "No images uploaded" });
-    }
-
-    const baseUrl = `${req.protocol}://${req.get("host")}/uploads/general`;
-
-    let result: any;
-
-    if (req.body.mapping) {
-        let mapping: Record<string, string>[];
-        try {
-            mapping = JSON.parse(req.body.mapping);
-        } catch (e) {
-            return res.status(400).json({ message: "Invalid mapping format" });
-        }
-
-        result = mapping.map((item, index) => {
-            const key = Object.keys(item)[0];
-            return {
-                [key]: files[index] ? `${baseUrl}/${files[index].filename}` : null,
-            };
-        });
-    } else {
-        result = files.map((file) => `${baseUrl}/${file.filename}`);
-    }
-
-    return res.status(200).json({ images: result });
-};
