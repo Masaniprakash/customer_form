@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IFlat extends Document {
+    _id: mongoose.Types.ObjectId;
     customer: Schema.Types.ObjectId;
+    general: Schema.Types.ObjectId;
     flat: string;
     block: string;
     floor: string;

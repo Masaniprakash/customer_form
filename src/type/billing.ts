@@ -1,8 +1,10 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IBilling extends Document {
+    _id: mongoose.Types.ObjectId;
     mobileNo: string;
     customer: mongoose.Types.ObjectId;
+    general: mongoose.Types.ObjectId;
     transactionType: "EMI Receipt" | "Other";
     customerName: string;
     billingId: string; // e.g., 6735:2-Sep
@@ -12,6 +14,7 @@ export interface IBilling extends Document {
     cardHolderName?: string;
     paymentDate: Date;
     emiNo: number;
+    emi : mongoose.Types.ObjectId;
     amountPaid: number;
     saleType: "plot" | "flat" | "villa";
     introducer: mongoose.Types.ObjectId;

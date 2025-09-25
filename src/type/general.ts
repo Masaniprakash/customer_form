@@ -1,5 +1,9 @@
+import mongoose from "mongoose";
+
 export interface IGeneral {
-    customer: string;
+    _id?:  mongoose.Types.ObjectId;
+    customer:  mongoose.Types.ObjectId;
+    marketer:  mongoose.Types.ObjectId;
     marketerName: string;
     saleDeedDoc?: string;
     paymentTerms?: string;

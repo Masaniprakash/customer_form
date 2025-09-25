@@ -11,6 +11,9 @@ const MarketerSchema = new Schema(
     commPercentage: { type: Number },
     commAmount: { type: Number },
     emiId: { type: Types.ObjectId, ref: "Emi" },
+    generalId: { type: Types.ObjectId, ref: "General" },
+    marketerHeadId: { type: Types.ObjectId, ref: "MarketingHead" },
+    percentageId: { type: Types.ObjectId, ref: "Percentage" },
   },
   { timestamps: true } // adds createdAt and updatedAt
 );

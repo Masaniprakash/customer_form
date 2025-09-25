@@ -4,7 +4,7 @@ import path from "path";
 import { Request } from "express";
 import express from "express";
 import fs from "fs";
-import { createCommonData, getAllBilling, getAllFlat, getAllGeneral, getAllPlot, getByIdBilling, getByIdFlat, getByIdGeneral, getByIdPlot, UpdateCommonData, uploadImages } from "../controllers/common.controller";
+import { createBilling, createCommonData, getAllBilling, getAllFlat, getAllGeneral, getAllPlot, getByIdBilling, getByIdFlat, getByIdGeneral, getByIdPlot, UpdateCommonData, uploadImages } from "../controllers/common.controller";
 
 let router = express.Router();
 const storage = multer.memoryStorage();
@@ -12,6 +12,7 @@ const upload = multer({ storage });
 
 router.post("/upload", upload.array("files"), uploadImages);
 router.post("/create/all", createCommonData)
+router.post("/create/billing", createBilling)
 router.put("/update/all", UpdateCommonData)
 router.get("/general/get/all", getAllGeneral)
 router.get("/general/get/:id", getByIdGeneral)

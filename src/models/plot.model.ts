@@ -1,10 +1,14 @@
 import mongoose, { model, Schema } from "mongoose";
 import { IPlot } from "../type/plot";
 
-const PlotSchema = new Schema<IPlot>({
+const PlotSchema = new Schema({
     customer: {
         type: mongoose.Schema.Types.String,
         ref: "Customer",
+    },
+    general: {
+        type: mongoose.Schema.Types.String,
+        ref: "General",
     },
     guideRatePerSqFt: {
         type: Number
@@ -26,4 +30,4 @@ const PlotSchema = new Schema<IPlot>({
     },
 }, { timestamps: true });
 
-export const Plot = model<IPlot>("Plot", PlotSchema);
+export const Plot = model("Plot", PlotSchema);

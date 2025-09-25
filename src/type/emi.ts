@@ -1,6 +1,9 @@
+import mongoose from "mongoose";
 
 export interface IEmi {
-    customer: string;
+    _id:  mongoose.Types.ObjectId;
+    customer:  mongoose.Types.ObjectId;
+    general:  mongoose.Types.ObjectId;
     emiNo: number;
     date: Date;
     emiAmt: number;

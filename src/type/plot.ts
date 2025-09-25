@@ -6,4 +6,5 @@ export interface IPlot {
   additionalCharges?: number;
   totalValue?: number;
   customer: string;
+  general: string;
 }

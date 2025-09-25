@@ -1,10 +1,14 @@
 import mongoose, { model, Schema } from "mongoose";
 import { IEmi } from "../type/emi";
 
-const EmiSchema = new Schema<IEmi>({
+const EmiSchema = new Schema({
     customer: {
         type: mongoose.Schema.Types.String,
         ref: "Customer",
+    },
+    general: {
+        type: mongoose.Schema.Types.String,
+        ref: "General",
     },
     emiNo: { type: Number },
     date: { type: Date },
@@ -14,4 +18,4 @@ const EmiSchema = new Schema<IEmi>({
     jpd: { type: String },
 },{ timestamps: true });
 
-export const Emi = model<IEmi>("Emi", EmiSchema);
+export const Emi = model("Emi", EmiSchema);

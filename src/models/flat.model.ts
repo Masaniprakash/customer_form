@@ -1,9 +1,13 @@
 import mongoose, { Schema } from "mongoose";
 import { IFlat } from "../type/flat";
 
-const FlatSchema: Schema = new Schema<IFlat>(
+const FlatSchema: Schema = new Schema(
   {
     customer: { type: Schema.Types.ObjectId, ref: "Customer" },
+    general: {
+      type: mongoose.Schema.Types.String,
+      ref: "General",
+    },
     flat: { type: String, required: true, trim: true },
     block: { type: String, required: true, trim: true },
     floor: { type: String, required: true, trim: true },
@@ -36,4 +40,4 @@ const FlatSchema: Schema = new Schema<IFlat>(
   { timestamps: true }
 );
 
-export const Flat = mongoose.model<IFlat>("Flat", FlatSchema);
+export const Flat = mongoose.model("Flat", FlatSchema);

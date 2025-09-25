@@ -13,6 +13,11 @@ const BillingSchema: Schema = new Schema<IBilling>(
       ref: "Customer",
     //   required: true,
     },
+    general: {
+      type: Schema.Types.ObjectId,
+      ref: "General",
+    //   required: true,
+    },
     transactionType: {
       type: String,
       enum: ["EMI Receipt", "Other"],
@@ -56,6 +61,10 @@ const BillingSchema: Schema = new Schema<IBilling>(
     emiNo: {
       type: Number,
     //   required: true,
+    },
+    emi:{
+        type: Schema.Types.ObjectId,
+        ref: 'Emi'
     },
     amountPaid: {
       type: Number,
