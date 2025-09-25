@@ -14,7 +14,7 @@ export interface IBilling extends Document {
     emiNo: number;
     amountPaid: number;
     saleType: "plot" | "flat" | "villa";
-    introducer: string;
+    introducer: mongoose.Types.ObjectId;
     status: "enquiry" | "blocked" | "active";
     remarks?: string;
     editDeleteReason?: string;

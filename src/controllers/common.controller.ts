@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { General } from "../models/general.model";
 import { Plot } from "../models/plot.model";
 import { Emi } from "../models/emi.model";
-import { isNull, ReE, ReS, toAwait } from "../services/util.service";
+import { isNull, isValidDate, ReE, ReS, toAwait } from "../services/util.service";
 import httpStatus from "http-status";
 import { Customer } from "../models/customer.model";
 import { Billing } from "../models/billing.model";
@@ -14,6 +14,12 @@ import { IBilling } from "../type/billing";
 import { IFlat } from "../type/flat";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3 } from "../services/digitalOceanConfig";
+import { MarketDetail } from "../models/marketDetail.model";
+import { MarketingHead } from "../models/marketingHead.model";
+import { IMarketingHead } from "../type/marketingHead";
+import { Percentage } from "../models/percentage.model";
+import { Marketer } from "../models/marketer";
+import { IEmi } from "../type/emi";
 
 
 export const uploadImages = async (req: Request, res: Response) => {
@@ -55,6 +61,10 @@ export const createCommonData = async (req: Request, res: Response) => {
         return ReE(res, { message: "customerId is required" }, httpStatus.BAD_REQUEST);
     }
 
+    if(!mongoose.isValidObjectId(customerId)){
+        return ReE(res, { message: "Invalid customerId" }, httpStatus.BAD_REQUEST);
+    }
+
     let checkCustomer;
     [err, checkCustomer] = await toAwait(Customer.findOne({ _id: customerId }));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
@@ -62,30 +72,65 @@ export const createCommonData = async (req: Request, res: Response) => {
         return ReE(res, { message: "customer not found for given id" }, httpStatus.BAD_REQUEST);
     }
 
-    let fields = ["customerId", "general", "plot", "billing", "flat"];
-    let inVaildFields = fields.filter(x => isNull(body[x]));
-    if (inVaildFields.length > 0) {
-        return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
+    let fields = [ "general", "plot", "billing", "flat" ];
+    let inVaildFields = fields.filter(x => !isNull(body[x]));
+    if (inVaildFields.length === 0) {
+        return ReE(res, { message: `Please enter any one field to create ${fields}!.` }, httpStatus.BAD_REQUEST);
     }
 
     const results: any = {};
     const errors: any[] = [];
+    let getMarketerHeadInBill : any;
+    let getEmiInBill : any;
 
     const tryCreate = async (model: any, data: any, key: string) => {
         try {
             results[key] = await model.create({ ...data, customer: customerId });
+            return true;
         } catch (err: any) {
             errors.push({ [key]: err.message });
+            return false;
         }
     };
 
-    if (general.status) {
-        general.status = general.status.toLowerCase();
-        let validValue = ["enquired", "blocked", "vacant"]
-        if (!validValue.includes(general.status)) {
-            return ReE(res, { message: `general status value is invalid valid value are (${validValue})` }, httpStatus.BAD_REQUEST);
+    if (general) {
+        if(general.status){
+            general.status = general.status.toLowerCase();
+            let validValue = ["enquired", "blocked", "vacant"]
+            if (!validValue.includes(general.status)) {
+                return ReE(res, { message: `general status value is invalid valid value are (${validValue})` }, httpStatus.BAD_REQUEST);
+            }
+            general.status = general.status === "enquired" ? "Enquired" : general.status === "blocked" ? "Blocked" : "Vacant";
         }
-        general.status = general.status === "enquired" ? "Enquired" : general.status === "blocked" ? "Blocked" : "Vacant";
+        if(!general.noOfInstallments){
+            return ReE(res, { message: "no of installments is required in general" }, httpStatus.BAD_REQUEST);
+        }
+
+        if(isNaN(general.noOfInstallments)){
+            return ReE(res, { message: "no of installments must be number in genaral" }, httpStatus.BAD_REQUEST);
+        }
+
+        if(!general.emiAmount){
+            return ReE(res, { message: "emi amount is required in general" }, httpStatus.BAD_REQUEST);
+        }
+
+        if(!general.marketer){
+            return ReE(res, { message: "marketer is required in general" }, httpStatus.BAD_REQUEST);
+        }
+
+        if(!mongoose.isValidObjectId(general.marketer)){
+            return ReE(res, { message: "Invalid marketer id in general" }, httpStatus.BAD_REQUEST);
+        }
+
+        let checkIntroducer, err:any;
+        [err, checkIntroducer] = await toAwait(MarketingHead.findOne({ _id: general.marketer }));
+        if(err){
+            return ReE(res, {message:`${err.message} - in marketer in general`}, httpStatus.INTERNAL_SERVER_ERROR);
+        }
+        if(!checkIntroducer){
+            return ReE(res, { message: "marketer id not found in create general" }, httpStatus.BAD_REQUEST);
+        }
+
     }
 
     if (billing) {
@@ -117,6 +162,16 @@ export const createCommonData = async (req: Request, res: Response) => {
             billing.saleType = billing.saleType === "plot" ? "Plot" : billing.saleType === "flat" ? "Flat" : "Villa";
         }
 
+        if(!billing.paidDate){
+            return ReE(res, { message: "paidDate is required in billing" }, httpStatus.BAD_REQUEST);
+        }
+
+        if (!isValidDate(billing.paidDate)) {
+            return ReE(res, { message: `Invalid date, valid format is (YYYY-MM-DD)!.` }, httpStatus.BAD_REQUEST);
+        }
+
+        billing.paidDate = new Date(billing.paidDate);
+
         // if (billing.transactionType) {
         //     let validValue = ["emi receipt", "other"]
         //     billing.transactionType = billing.transactionType.toLowerCase();
@@ -126,38 +181,68 @@ export const createCommonData = async (req: Request, res: Response) => {
         //     billing.transactionType = billing.transactionType === "emi receipt" ? "EMI Receipt" : "Other";
         // }
 
+
+        if(!billing.emi){
+            return ReE(res, { message: "emi is required when billing is created" }, httpStatus.BAD_REQUEST);
+        }
+        if(!mongoose.isValidObjectId(billing.emi)){
+            return ReE(res, { message: "Invalid emi id in billing" }, httpStatus.BAD_REQUEST);
+        }
+        let checkEmi, err:any;
+        [err, checkEmi] = await toAwait(Emi.findOne({ _id: billing.emi }));
+        if(err){
+            return ReE(res, {message:`${err.message} - in emi details in billing`}, httpStatus.INTERNAL_SERVER_ERROR);
+        }
+        if(!checkEmi){
+            return ReE(res, { message: "emi id not found in create billing" }, httpStatus.BAD_REQUEST);
+        }
+        checkEmi= checkEmi as IEmi
+        getEmiInBill = checkEmi;
+
+        billing.paidAmt = checkEmi.emiAmt;
+
+        if(!billing.introducer){
+            return ReE(res, { message: "introducer is required when billing is created" }, httpStatus.BAD_REQUEST);
+        }
+
+
+        if(!mongoose.isValidObjectId(billing.introducer)){
+            return ReE(res, { message: "Invalid introducer id in billing" }, httpStatus.BAD_REQUEST);
+        }
+
+        let checkIntroducer;
+        [err, checkIntroducer] = await toAwait(MarketingHead.findOne({ _id: billing.introducer }).populate("percentageId"));
+        if(err){
+            return ReE(res, {message:`${err.message} - in introducer details in billing`}, httpStatus.INTERNAL_SERVER_ERROR);
+        }
+        if(!checkIntroducer){
+            return ReE(res, { message: "introducer id not found in create billing" }, httpStatus.BAD_REQUEST);
+        }
+
+        checkIntroducer = checkIntroducer as IMarketingHead;
+        getMarketerHeadInBill = checkIntroducer;
+
     }
 
     if (general) {
         let checkAlreadyExist = await General.findOne(general);
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
         if (checkAlreadyExist) return ReE(res, { message: `general already exist based on given all details` }, httpStatus.BAD_REQUEST);
-        await tryCreate(General, general, "general");
+        let status = await tryCreate(General, general, "general");
 
-        //if general.noOfInstallments no of installments then create emi receipt
-        if(general.noOfInstallments){
-            for (let index = 0; index < general.noOfInstallments; index++) {
-                //  customer: {
-                //         type: mongoose.Schema.Types.String,
-                //         ref: "Customer",
-                //     },
-                //     emiNo: { type: Number, required: true },
-                //     date: { type: Date, required: true },
-                //     emiAmt: { type: Number, required: true },
-                //     paidDate: { type: Date },
-                //     paidAmt: { type: Number },
-                let emi={
-                    customer: customerId,
-                    emiNo: index + 1,
-                    date: new Date(),
-                    emiAmt: general.emiAmt
+        if(status){
+            if(general.noOfInstallments){
+                for (let index = 0; index < general.noOfInstallments; index++) {
+                    let emi={
+                        customer: customerId,
+                        emiNo: index + 1,
+                        date: new Date(new Date().setMonth(new Date().getMonth() + index)),
+                        emiAmt: general.emiAmount
+                    }
+                    await tryCreate(Emi, emi, "emi");
                 }
-                await tryCreate(Emi, emi, "emi");
             }
         }
-        
-
-        //if success then send we create emi receipt
     }
 
     if (billing) {
@@ -165,7 +250,32 @@ export const createCommonData = async (req: Request, res: Response) => {
         let checkAlreadyExist = await Billing.findOne(billing);
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
         if (checkAlreadyExist) return ReE(res, { message: `billing already exist based on given all details` }, httpStatus.BAD_REQUEST);
-        await tryCreate(Billing, billing, "billing");
+        let status =await tryCreate(Billing, billing, "billing");
+        let percent = Number(getMarketerHeadInBill?.percentageId?.rate?.replace("%", ""));
+        
+        if(status){
+            if(getMarketerHeadInBill?.percentageId?.rate){
+                let marketerDe = {
+                    customer: customerId,
+                    emiNo: getEmiInBill?.emiNo,
+                    paidDate: billing.paidDate,
+                    paidAmt: billing.paidAmt ,
+                    marketer: billing.introducer,
+                    commPercentage: percent,
+                    commAmount: billing.paidAmt  * (percent / 100),
+                    emiId: getEmiInBill?._id
+                }
+                let s = await tryCreate(Marketer, marketerDe, "marketer");
+
+                if(s){
+                    let updateEmi;
+                    [err, updateEmi] = await toAwait(Emi.findOneAndUpdate({ _id: getEmiInBill?._id }, { paidDate: billing.paidDate }, { new: true }));
+                    if(err){
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     if (plot) {

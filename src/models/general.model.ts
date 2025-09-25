@@ -5,8 +5,9 @@ const GeneralSchema = new Schema({
         type: mongoose.Schema.Types.String,
         ref: "Customer",
     },
-    marketerName: {
-        type: String,
+    marketer: {
+        type: mongoose.Schema.Types.String,
+        ref: "MarketingHead",
     },
     saleDeedDoc: {
         type: String

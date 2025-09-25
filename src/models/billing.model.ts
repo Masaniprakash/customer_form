@@ -67,8 +67,8 @@ const BillingSchema: Schema = new Schema<IBilling>(
     //   required: true,
     },
     introducer: {
-      type: String, // Coming from marketer API
-    //   required: true,
+      type: Schema.Types.ObjectId,
+      ref: "MarketingHead",
     },
     status: {
       type: String,
