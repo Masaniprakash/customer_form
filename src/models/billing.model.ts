@@ -63,8 +63,8 @@ const BillingSchema: Schema = new Schema<IBilling>(
     //   required: true,
     },
     emi:{
-        type: Schema.Types.ObjectId,
-        ref: 'Emi'
+      type: Schema.Types.ObjectId,
+      ref: 'Emi'
     },
     amountPaid: {
       type: Number,
