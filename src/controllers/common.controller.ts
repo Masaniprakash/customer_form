@@ -469,15 +469,17 @@ export const getAllEmi = async (req: Request, res: Response) => {
         option.general = generalId;
     }
     if(paid){
-        if(typeof paid !== "boolean"){
-            return ReE(res, { message: "paid is invalid value valid value is boolean" }, httpStatus.BAD_REQUEST);
+        let valid = ["true", "false"]
+        paid = paid.toString().toLocaleLowerCase()
+        if(!valid.includes(paid)){
+            return ReE(res, { message: "paid is invalid value valid value is true or false" }, httpStatus.BAD_REQUEST);
         }
         // option.paidDate = paid;
         //paidDate is null if paid false and if paid true get not null
-        if(paid){
-            option.paidDate = null;
-        }else{
+        if(paid === "true"){
             option.paidDate = {$ne: null};
+        }else{
+            option.paidDate = null;
         }
 
     }
