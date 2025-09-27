@@ -443,7 +443,7 @@ export const getAllFlat = async (req: Request, res: Response) => {
 export const getAllEmi = async (req: Request, res: Response) => {
     let getEmi;
     let err;
-    let { customerId, generalId } = req.query, option: any = {};
+    let { customerId, generalId, paid } = req.query, option: any = {};
     if (customerId) {
         if (!mongoose.isValidObjectId(customerId)) {
             return ReE(res, { message: "customer id is invalid" }, httpStatus.BAD_REQUEST);
@@ -467,6 +467,19 @@ export const getAllEmi = async (req: Request, res: Response) => {
             return ReE(res, { message: "general not found given id" }, httpStatus.NOT_FOUND)
         }
         option.general = generalId;
+    }
+    if(paid){
+        if(typeof paid !== "boolean"){
+            return ReE(res, { message: "paid is invalid value valid value is boolean" }, httpStatus.BAD_REQUEST);
+        }
+        // option.paidDate = paid;
+        //paidDate is null if paid false and if paid true get not null
+        if(paid){
+            option.paidDate = null;
+        }else{
+            option.paidDate = {$ne: null};
+        }
+
     }
     [err, getEmi] = await toAwait(Emi.find(option).populate("customer").populate("general"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
@@ -609,13 +622,13 @@ export const createBilling = async (req: Request, res: Response) => {
     let body = req.body;
     let err;
 
-    let fields = ["customerId", "generalId", "status", "modeOfPayment", "saleType", "paymentDate", "emi"];
+    let fields = ["customerId", "status", "modeOfPayment", "saleType", "paymentDate", "emi"];
     let inVaildFields = fields.filter(x => isNull(body[x]));
     if (inVaildFields.length > 0) {
         return ReE(res, { message: `Please enter require fields: ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
     }
 
-    let { customerId, generalId, status, modeOfPayment, saleType, cardNo, cardHolderName, remarks, paymentDate, emi, balanceAmount } = body;
+    let { customerId, status, modeOfPayment, saleType, cardNo, cardHolderName, remarks, paymentDate, emi, balanceAmount } = body;
 
     if (!customerId) {
         return ReE(res, { message: "customerId is required" }, httpStatus.BAD_REQUEST);
@@ -633,24 +646,6 @@ export const createBilling = async (req: Request, res: Response) => {
     }
 
     checkCustomer = checkCustomer as ICustomer
-
-    if (!generalId) {
-        return ReE(res, { message: "generalId is required" }, httpStatus.BAD_REQUEST);
-    }
-
-    if (!mongoose.isValidObjectId(generalId)) {
-        return ReE(res, { message: "Invalid generalId" }, httpStatus.BAD_REQUEST);
-    }
-
-    let checkGeneral;
-    [err, checkGeneral] = await toAwait(General.findOne({ _id: generalId }));
-    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-    if (!checkGeneral) {
-        return ReE(res, { message: "general not found for given id" }, httpStatus.BAD_REQUEST);
-    }
-
-    checkGeneral = checkGeneral as IGeneral
-
     if (!isValidDate(paymentDate)) {
         return ReE(res, { message: `Invalid date, valid format is (YYYY-MM-DD)!.` }, httpStatus.BAD_REQUEST);
     }
@@ -698,7 +693,7 @@ export const createBilling = async (req: Request, res: Response) => {
     }
 
     let getAllEmi;
-    [err, getAllEmi] = await toAwait(Emi.find({ emiNo: { $gt: checkEmi.emiNo }, general: generalId, customer: customerId }));
+    [err, getAllEmi] = await toAwait(Emi.find({ emiNo: { $gt: checkEmi.emiNo }, general: checkEmi.general, customer: customerId }));
     if (err) {
         return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -708,6 +703,15 @@ export const createBilling = async (req: Request, res: Response) => {
     } else {
         balanceAmount = getAllEmi.reduce((acc, curr) => acc + curr.emiAmt, 0);
     }
+
+    let checkGeneral;
+    [err, checkGeneral] = await toAwait(General.findOne({ _id: checkEmi.general }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    if (!checkGeneral) {
+        return ReE(res, { message: "general not found for given id" }, httpStatus.BAD_REQUEST);
+    }
+
+    checkGeneral = checkGeneral as IGeneral
 
     let createBill = {
         emiNo: checkEmi.emiNo,
@@ -721,7 +725,7 @@ export const createBilling = async (req: Request, res: Response) => {
         mobileNo: checkCustomer.phone,
         cardNo,
         customer: customerId,
-        general: generalId,
+        general: checkEmi.general,
         cardHolderName,
         remarks,
         customerName: checkCustomer.name,
@@ -736,13 +740,13 @@ export const createBilling = async (req: Request, res: Response) => {
         return ReE(res, { message: "emi inside marketer head not found" }, httpStatus.BAD_REQUEST);
     }
 
-    let checkAlreadyExist = await Billing.findOne({ emi, general: generalId, customer: customerId });
+    let checkAlreadyExist = await Billing.findOne({ emi, general: checkEmi.general, customer: customerId });
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     if (checkAlreadyExist) return ReE(res, { message: `billing already exist for this emi no ${checkEmi.emiNo} for this customer!` }, httpStatus.BAD_REQUEST);
 
 
     let getAllPaidEmi;
-    [err, getAllPaidEmi] = await toAwait(Emi.find({ customer: customerId, general: generalId, paidDate: { $ne: null } }));
+    [err, getAllPaidEmi] = await toAwait(Emi.find({ customer: customerId, general: checkEmi.general, paidDate: { $ne: null } }));
 
     getAllPaidEmi = getAllPaidEmi as IEmi[]
 
@@ -778,7 +782,7 @@ export const createBilling = async (req: Request, res: Response) => {
         paidAmt: billing.amountPaid,
         marketer: billing.introducer,
         emiId: emi,
-        generalId: generalId,
+        generalId: checkGeneral._id,
         marketerHeadId: checkGeneral.marketer,
         percentageId: getMarketerHead.percentageId
     }
