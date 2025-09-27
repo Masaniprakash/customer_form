@@ -757,11 +757,11 @@ export const createBilling = async (req: Request, res: Response) => {
     if(getAllPaidEmi.length !== 0){
         let lastEmi = getAllPaidEmi[getAllPaidEmi.length - 1];
         if(lastEmi.emiNo + 1 !== checkEmi.emiNo){
-            return ReE(res, { message: `for this customer lastest emi no ${lastEmi.emiNo  + 1 } is not billing added, so we can't create billing for this emi no:${checkEmi.emiNo}` }, httpStatus.BAD_REQUEST);
+            return ReE(res, { message: `Cannot create billing for EMI No. ${checkEmi.emiNo}. Latest pending EMI is No. ${lastEmi.emiNo  + 1 }` }, httpStatus.BAD_REQUEST);
         }
     }else{
         if(checkEmi.emiNo !== 1){
-            return ReE(res, { message: "for this customer emi 1 is not billing added, so we can't create billing for this emi no:"+ checkEmi.emiNo }, httpStatus.BAD_REQUEST);
+            return ReE(res, { message: "Cannot create billing for EMI No. "+ checkEmi.emiNo+". Pending EMI is No. 1." }, httpStatus.BAD_REQUEST);
         }
     }
 
