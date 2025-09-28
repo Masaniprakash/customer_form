@@ -624,13 +624,13 @@ export const createBilling = async (req: Request, res: Response) => {
     let body = req.body;
     let err;
 
-    let fields = ["customerId", "status", "modeOfPayment", "saleType", "paymentDate", "emi"];
+    let fields = ["customerId", "status", "modeOfPayment", "saleType", "amount","paymentDate","emi"];
     let inVaildFields = fields.filter(x => isNull(body[x]));
     if (inVaildFields.length > 0) {
         return ReE(res, { message: `Please enter require fields: ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
     }
 
-    let { customerId, status, modeOfPayment, saleType, cardNo, cardHolderName, remarks, paymentDate, emi, balanceAmount } = body;
+    let { customerId, status, modeOfPayment, saleType, amount, cardNo, cardHolderName, remarks, paymentDate, emi, balanceAmount } = body;
 
     if (!customerId) {
         return ReE(res, { message: "customerId is required" }, httpStatus.BAD_REQUEST);
@@ -694,17 +694,7 @@ export const createBilling = async (req: Request, res: Response) => {
         saleType = saleType === "plot" ? "Plot" : saleType === "flat" ? "Flat" : "Villa";
     }
 
-    let getAllEmi;
-    [err, getAllEmi] = await toAwait(Emi.find({ emiNo: { $gt: checkEmi.emiNo }, general: checkEmi.general, customer: customerId }));
-    if (err) {
-        return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-    }
-    getAllEmi = getAllEmi as IEmi[];
-    if (getAllEmi.length === 0) {
-        balanceAmount = 0;
-    } else {
-        balanceAmount = getAllEmi.reduce((acc, curr) => acc + curr.emiAmt, 0);
-    }
+
 
     let checkGeneral;
     [err, checkGeneral] = await toAwait(General.findOne({ _id: checkEmi.general }));
@@ -715,9 +705,28 @@ export const createBilling = async (req: Request, res: Response) => {
 
     checkGeneral = checkGeneral as IGeneral
 
+    let getAllBill;
+    [err, getAllBill] = await toAwait(Billing.find({ general: checkEmi.general, customer: customerId }));
+    if (err) {
+        return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    }
+    getAllBill = getAllBill as IBilling[];
+    let totalAmount  = checkGeneral.emiAmount! * checkGeneral.noOfInstallments!
+    if (getAllBill.length === 0) {
+        balanceAmount = isNaN(totalAmount) ? amount : totalAmount - amount;
+        console.log(balanceAmount,"mass");
+    } else {
+        let total = getAllBill.reduce((acc, curr) => acc + curr.amountPaid, 0);
+        console.log(total,"mass1");
+        balanceAmount = totalAmount - (total + amount);
+    }
+
+    console.log(balanceAmount,totalAmount,"mass2");
+    
+
     let createBill = {
         emiNo: checkEmi.emiNo,
-        amountPaid: checkEmi.emiAmt,
+        amountPaid: amount,
         paymentDate: new Date(paymentDate),
         transactionType: "EMI Receipt",
         saleType,
@@ -747,27 +756,27 @@ export const createBilling = async (req: Request, res: Response) => {
     if (checkAlreadyExist) return ReE(res, { message: `billing already exist for this emi no ${checkEmi.emiNo} for this customer!` }, httpStatus.BAD_REQUEST);
 
 
-    let getAllPaidEmi;
-    [err, getAllPaidEmi] = await toAwait(Emi.find({ customer: customerId, general: checkEmi.general, paidDate: { $ne: null } }));
+    // let getAllPaidEmi;
+    // [err, getAllPaidEmi] = await toAwait(Emi.find({ customer: customerId, general: checkEmi.general, paidDate: { $ne: null } }));
 
-    getAllPaidEmi = getAllPaidEmi as IEmi[]
+    // if (err) {
+    //     return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    // }
 
-    getAllPaidEmi.sort((a, b) => a.emiNo - b.emiNo);
+    // getAllPaidEmi = getAllPaidEmi as IEmi[]
 
-    if(getAllPaidEmi.length !== 0){
-        let lastEmi = getAllPaidEmi[getAllPaidEmi.length - 1];
-        if(lastEmi.emiNo + 1 !== checkEmi.emiNo){
-            return ReE(res, { message: `Cannot create billing for EMI No. ${checkEmi.emiNo}. Latest pending EMI is No. ${lastEmi.emiNo  + 1 }` }, httpStatus.BAD_REQUEST);
-        }
-    }else{
-        if(checkEmi.emiNo !== 1){
-            return ReE(res, { message: "Cannot create billing for EMI No. "+ checkEmi.emiNo+". Pending EMI is No. 1." }, httpStatus.BAD_REQUEST);
-        }
-    }
+    // getAllPaidEmi.sort((a, b) => a.emiNo - b.emiNo);
 
-    if (err) {
-        return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-    }
+    // if(getAllPaidEmi.length !== 0){
+    //     let lastEmi = getAllPaidEmi[getAllPaidEmi.length - 1];
+    //     if(lastEmi.emiNo + 1 !== checkEmi.emiNo){
+    //         return ReE(res, { message: `Cannot create billing for EMI No. ${checkEmi.emiNo}. Latest pending EMI is No. ${lastEmi.emiNo  + 1 }` }, httpStatus.BAD_REQUEST);
+    //     }
+    // }else{
+    //     if(checkEmi.emiNo !== 1){
+    //         return ReE(res, { message: "Cannot create billing for EMI No. "+ checkEmi.emiNo+". Pending EMI is No. 1." }, httpStatus.BAD_REQUEST);
+    //     }
+    // }
 
     let billing;
     [err, billing] = await toAwait(Billing.create(createBill));
