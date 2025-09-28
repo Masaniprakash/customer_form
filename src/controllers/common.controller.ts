@@ -922,7 +922,7 @@ export const getAllDataBasedOnGeneral = async (req: Request, res: Response) => {
 
     // ✅ Get all general entries for the customer
     let err, generalList;
-    [err, generalList] = await toAwait(General.find({ customer: customerId }));
+    [err, generalList] = await toAwait(General.find({ customer: customerId }).populate("customer").populate("marketer"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
     // ✅ Prepare result array
@@ -933,19 +933,19 @@ export const getAllDataBasedOnGeneral = async (req: Request, res: Response) => {
     for (const general of generalList) {
         let objPlot, objFlat, objMarketer, objEmi, objBilling;
 
-        [err, objPlot] = await toAwait(Plot.find({ general: general._id }));
+        [err, objPlot] = await toAwait(Plot.find({ general: general._id }).populate("customer").populate("general"));
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-        [err, objFlat] = await toAwait(Flat.find({ general: general._id }));
+        [err, objFlat] = await toAwait(Flat.find({ general: general._id }).populate("customer").populate("general"));
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-        [err, objMarketer] = await toAwait(Marketer.find({ general: general._id }));
+        [err, objMarketer] = await toAwait(Marketer.find({ general: general._id }).populate("customer").populate("generalId").populate("emiId").populate("marketerHeadId").populate("percentageId"));
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-        [err, objEmi] = await toAwait(Emi.find({ general: general._id }));
+        [err, objEmi] = await toAwait(Emi.find({ general: general._id }).populate("customer").populate("general"));
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-        [err, objBilling] = await toAwait(Billing.find({ general: general._id }));
+        [err, objBilling] = await toAwait(Billing.find({ general: general._id }).populate("customer").populate("general").populate("introducer").populate("emi"));
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
         result.push({
@@ -970,26 +970,26 @@ export const getDataBasedOnGeneralById = async (req: Request, res: Response) => 
 
     // ✅ Get all general entries for the customer
     let err, general;
-    [err, general] = await toAwait(General.findOne({ _id: id }));
+    [err, general] = await toAwait(General.findOne({ _id: id }).populate("customer").populate("marketer"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
     general = general as IGeneral
 
     let objPlot, objFlat, objMarketer, objEmi, objBilling;
 
-    [err, objPlot] = await toAwait(Plot.find({ general: general._id }));
+    [err, objPlot] = await toAwait(Plot.find({ general: general._id }).populate("customer").populate("general"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-    [err, objFlat] = await toAwait(Flat.find({ general: general._id }));
+    [err, objFlat] = await toAwait(Flat.find({ general: general._id }).populate("customer").populate("general"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-    [err, objMarketer] = await toAwait(Marketer.find({ general: general._id }));
+    [err, objMarketer] = await toAwait(Marketer.find({ general: general._id }).populate("customer").populate("generalId").populate("emiId").populate("marketerHeadId").populate("percentageId"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-    [err, objEmi] = await toAwait(Emi.find({ general: general._id }));
+    [err, objEmi] = await toAwait(Emi.find({ general: general._id }).populate("customer").populate("general"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-    [err, objBilling] = await toAwait(Billing.find({ general: general._id }));
+    [err, objBilling] = await toAwait(Billing.find({ general: general._id }).populate("customer").populate("general").populate("introducer").populate("emi"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
     let result = {
