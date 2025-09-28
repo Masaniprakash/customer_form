@@ -468,17 +468,17 @@ export const getAllEmi = async (req: Request, res: Response) => {
         }
         option.general = generalId;
     }
-    if(paid){
+    if (paid) {
         let valid = ["true", "false"]
         paid = paid.toString().toLocaleLowerCase()
-        if(!valid.includes(paid)){
+        if (!valid.includes(paid)) {
             return ReE(res, { message: "paid is invalid value valid value is true or false" }, httpStatus.BAD_REQUEST);
         }
         // option.paidDate = paid;
         //paidDate is null if paid false and if paid true get not null
-        if(paid === "true"){
-            option.paidDate = {$ne: null};
-        }else{
+        if (paid === "true") {
+            option.paidDate = { $ne: null };
+        } else {
             option.paidDate = null;
         }
 
@@ -624,7 +624,7 @@ export const createBilling = async (req: Request, res: Response) => {
     let body = req.body;
     let err;
 
-    let fields = ["customerId", "status", "modeOfPayment", "saleType", "amount","paymentDate","emi"];
+    let fields = ["customerId", "status", "modeOfPayment", "saleType", "amount", "paymentDate", "emi"];
     let inVaildFields = fields.filter(x => isNull(body[x]));
     if (inVaildFields.length > 0) {
         return ReE(res, { message: `Please enter require fields: ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
@@ -711,18 +711,15 @@ export const createBilling = async (req: Request, res: Response) => {
         return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     }
     getAllBill = getAllBill as IBilling[];
-    let totalAmount  = checkGeneral.emiAmount! * checkGeneral.noOfInstallments!
+    let totalAmount = checkGeneral.emiAmount! * checkGeneral.noOfInstallments!
     if (getAllBill.length === 0) {
         balanceAmount = isNaN(totalAmount) ? amount : totalAmount - amount;
-        console.log(balanceAmount,"mass");
+        console.log(balanceAmount, "mass");
     } else {
         let total = getAllBill.reduce((acc, curr) => acc + curr.amountPaid, 0);
-        console.log(total,"mass1");
+        console.log(total, "mass1");
         balanceAmount = totalAmount - (total + amount);
     }
-
-    console.log(balanceAmount,totalAmount,"mass2");
-    
 
     let createBill = {
         emiNo: checkEmi.emiNo,
@@ -853,7 +850,7 @@ export const getAllDetailsByCustomerId = async (req: Request, res: Response) => 
         }
         option.general = generalId;
     }
-    let data : any= {};
+    let data: any = {};
 
     //get all general
     let filterGeneral = { customer: customerId }
@@ -892,3 +889,118 @@ export const getAllDetailsByCustomerId = async (req: Request, res: Response) => 
 
     return ReS(res, { message: "success", data: data }, httpStatus.OK);
 }
+
+export const getAllTypeBasedGenId = async (req: Request, res: Response) => {
+    let err;
+    let { customerId } = req.query, option: any = {};
+    if (customerId) {
+        if (!mongoose.isValidObjectId(customerId)) {
+            return ReE(res, { message: "customer id is invalid" }, httpStatus.BAD_REQUEST);
+        }
+        let getCustomer;
+        [err, getCustomer] = await toAwait(Customer.findOne({ _id: customerId }));
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (!getCustomer) {
+            return ReE(res, { message: "customer not found given id" }, httpStatus.NOT_FOUND)
+        }
+        option.customer = customerId;
+    }
+    let getGeneral;
+    [err, getGeneral] = await toAwait(General.find({ customer: customerId }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    //obj = [{general:objGeneral, flat:objFlat, plot:objPlot, marketer:objMarketer, emi:objEmi, billing:objBilling}]
+
+    return ReS(res, { message: "success", data: getGeneral }, httpStatus.OK);
+}
+
+export const getAllDataBasedOnGeneral = async (req: Request, res: Response) => {
+    const { customerId } = req.query;
+
+    if (!customerId || !mongoose.isValidObjectId(customerId.toString())) {
+        return ReE(res, { message: "Invalid or missing customerId" }, httpStatus.BAD_REQUEST);
+    }
+
+    // ✅ Get all general entries for the customer
+    let err, generalList;
+    [err, generalList] = await toAwait(General.find({ customer: customerId }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    // ✅ Prepare result array
+    const result = [];
+
+    generalList = generalList as IGeneral[]
+
+    for (const general of generalList) {
+        let objPlot, objFlat, objMarketer, objEmi, objBilling;
+
+        [err, objPlot] = await toAwait(Plot.find({ general: general._id }));
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+        [err, objFlat] = await toAwait(Flat.find({ general: general._id }));
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+        [err, objMarketer] = await toAwait(Marketer.find({ general: general._id }));
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+        [err, objEmi] = await toAwait(Emi.find({ general: general._id }));
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+        [err, objBilling] = await toAwait(Billing.find({ general: general._id }));
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+        result.push({
+            general,
+            plot: objPlot,
+            flat: objFlat,
+            marketer: objMarketer,
+            emi: objEmi,
+            billing: objBilling,
+        });
+    }
+
+    return ReS(res, { message: "success", data: result }, httpStatus.OK);
+};
+
+export const getDataBasedOnGeneralById = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!id || !mongoose.isValidObjectId(id.toString())) {
+        return ReE(res, { message: "Invalid or missing general id" }, httpStatus.BAD_REQUEST);
+    }
+
+    // ✅ Get all general entries for the customer
+    let err, general;
+    [err, general] = await toAwait(General.findOne({ _id: id }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    general = general as IGeneral
+
+    let objPlot, objFlat, objMarketer, objEmi, objBilling;
+
+    [err, objPlot] = await toAwait(Plot.find({ general: general._id }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    [err, objFlat] = await toAwait(Flat.find({ general: general._id }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    [err, objMarketer] = await toAwait(Marketer.find({ general: general._id }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    [err, objEmi] = await toAwait(Emi.find({ general: general._id }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    [err, objBilling] = await toAwait(Billing.find({ general: general._id }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    let result = {
+        general,
+        plot: objPlot,
+        flat: objFlat,
+        marketer: objMarketer,
+        emi: objEmi,
+        billing: objBilling,
+    };
+
+
+    return ReS(res, { message: "success", data: result }, httpStatus.OK);
+};
