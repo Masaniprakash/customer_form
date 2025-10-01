@@ -14,8 +14,6 @@ export const createProject = async (req: Request, res: Response) => {
   if (checkProject) return ReE(res, { message: "Project already exist for given all data" }, httpStatus.BAD_REQUEST);
   let project;
   [err, project] = await toAwait(Project.create(body));
-  console.log(body);
-  console.log(err);
   
   if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
   if (!project) {

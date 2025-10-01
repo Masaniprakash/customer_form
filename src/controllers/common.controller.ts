@@ -712,10 +712,8 @@ export const createBilling = async (req: Request, res: Response) => {
     let totalAmount = checkGeneral.emiAmount! * checkGeneral.noOfInstallments!
     if (getAllBill.length === 0) {
         balanceAmount = isNaN(totalAmount) ? amount : totalAmount - amount;
-        console.log(balanceAmount, "mass");
     } else {
         let total = getAllBill.reduce((acc, curr) => acc + curr.amountPaid, 0);
-        console.log(total, "mass1");
         balanceAmount = totalAmount - (total + amount);
     }
 

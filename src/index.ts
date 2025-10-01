@@ -72,7 +72,6 @@ cron.schedule("02 00 * * *", async () => {
       paidDate: null,
       date: { $lte: cutoffDate }, // MongoDB comparison
     });
-    console.log("Unpaid EMIs:", unpaidEmis);
     for (const emi of unpaidEmis) {
       const emiDate = new Date(emi.date);
       const duePlus2Months = new Date(emiDate);
