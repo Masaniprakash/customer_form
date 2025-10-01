@@ -939,7 +939,7 @@ export const getAllDataBasedOnGeneral = async (req: Request, res: Response) => {
         [err, objFlat] = await toAwait(Flat.find({ general: general._id }).populate("customer").populate("general"));
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-        [err, objMarketer] = await toAwait(Marketer.find({ general: general._id }).populate("customer").populate("generalId").populate("emiId").populate("marketerHeadId").populate("percentageId"));
+        [err, objMarketer] = await toAwait(Marketer.find({ generalId: general._id }).populate("customer").populate("generalId").populate("emiId").populate("marketerHeadId").populate("percentageId"));
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
         [err, objEmi] = await toAwait(Emi.find({ general: general._id }).populate("customer").populate("general"));
@@ -983,7 +983,7 @@ export const getDataBasedOnGeneralById = async (req: Request, res: Response) => 
     [err, objFlat] = await toAwait(Flat.find({ general: general._id }).populate("customer").populate("general"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-    [err, objMarketer] = await toAwait(Marketer.find({ general: general._id }).populate("customer").populate("generalId").populate("emiId").populate("marketerHeadId").populate("percentageId"));
+    [err, objMarketer] = await toAwait(Marketer.find({ generalId: general._id }).populate("customer").populate("generalId").populate("emiId").populate("marketerHeadId").populate("percentageId"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
     [err, objEmi] = await toAwait(Emi.find({ general: general._id }).populate("customer").populate("general"));
@@ -1000,7 +1000,6 @@ export const getDataBasedOnGeneralById = async (req: Request, res: Response) => 
         emi: objEmi,
         billing: objBilling,
     };
-
 
     return ReS(res, { message: "success", data: result }, httpStatus.OK);
 };
