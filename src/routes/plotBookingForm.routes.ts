@@ -81,7 +81,10 @@ const router = Router();
 
 // const upload = multer({ storage })
 
-// router.post("/create", upload.single("photo"),  createPlotBookingForm);
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+router.post("/create", upload.single("photo"),  createPlotBookingForm);
 router.get("/get/all", getAllPlotBookingForms);
 
 export default router;
