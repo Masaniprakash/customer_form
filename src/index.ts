@@ -19,6 +19,10 @@ import cors from "cors";
 import path from "path";
 import plotBookingFormRoutes from "./routes/plotBookingForm.routes";
 import lifeSacingRoutes from "./routes/lifeSaving.routes";
+import { IEmi } from "./type/emi";
+import { Emi } from "./models/emi.model";
+import { General } from "./models/general.model";
+import cron from "node-cron";
 
 const app = express();
 app.use(express.json());
@@ -29,9 +33,9 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 const port = process.env.PORT || 5005
 const db = process.env.DBURL || "mongodb://localhost:27017/customer"
-mongoose.connect(db).then(()=>{
+mongoose.connect(db).then(() => {
   console.log("Connected to MongoDB")
-}).catch((error:any)=>{
+}).catch((error: any) => {
   console.log("Error connecting to MongoDB", error)
 })
 
@@ -51,5 +55,41 @@ app.use("/api/user", user);
 app.use("/api/common", common);
 app.use("/api/plot/booking", plotBookingFormRoutes);
 app.use("/api/life/saving", lifeSacingRoutes);
+
+cron.schedule("02 00 * * *", async () => {
+  console.log("Running cron job");
+  try {
+    // Find all unpaid EMIs
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // normalize date
+
+    // Calculate the cutoff date: EMIs whose date + 2 months <= today
+    const cutoffDate = new Date(today);
+    cutoffDate.setMonth(cutoffDate.getMonth() - 2); // subtract 2 months
+
+    // Find unpaid EMIs where emi.date <= cutoffDate
+    const unpaidEmis: IEmi[] = await Emi.find({
+      paidDate: null,
+      date: { $lte: cutoffDate }, // MongoDB comparison
+    });
+    console.log("Unpaid EMIs:", unpaidEmis);
+    for (const emi of unpaidEmis) {
+      const emiDate = new Date(emi.date);
+      const duePlus2Months = new Date(emiDate);
+      duePlus2Months.setMonth(duePlus2Months.getMonth() + 2);
+      duePlus2Months.setHours(0, 0, 0, 0);
+      if (duePlus2Months <= today) {
+        await General.findByIdAndUpdate(
+          emi.general,
+          { status: "blocked" },
+          { new: true }
+        );
+      }
+    }
+
+  } catch (err) {
+    console.error("Error in cron job:", err);
+  }
+});
 
 app.listen(port, () => console.log("Server running on port " + port));

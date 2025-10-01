@@ -4,7 +4,7 @@ import path from "path";
 import { Request } from "express";
 import express from "express";
 import fs from "fs";
-import { createBilling, createCommonData, getAllBilling, getAllDataBasedOnGeneral, getAllDetailsByCustomerId, getAllEmi, getAllFlat, getAllGeneral, getAllMarketer, getAllPlot, getByIdBilling, getByIdEmi, getByIdFlat, getByIdGeneral, getByIdMarketer, getByIdPlot, getDataBasedOnGeneralById, UpdateCommonData, uploadImages } from "../controllers/common.controller";
+import { checkEmi, createBilling, createCommonData, getAllBilling, getAllDataBasedOnGeneral, getAllDetailsByCustomerId, getAllEmi, getAllFlat, getAllGeneral, getAllMarketer, getAllPlot, getByIdBilling, getByIdEmi, getByIdFlat, getByIdGeneral, getByIdMarketer, getByIdPlot, getDataBasedOnGeneralById, UpdateCommonData, uploadImages } from "../controllers/common.controller";
 
 let router = express.Router();
 const storage = multer.memoryStorage();
@@ -29,5 +29,6 @@ router.get("/marketer/get/:id", getByIdMarketer)
 router.get("/get/all/detail", getAllDetailsByCustomerId)
 router.get("/get/all/estimate", getAllDataBasedOnGeneral)
 router.get("/get/all/estimate/:id", getDataBasedOnGeneralById)
+router.post("/check/emi", checkEmi)
 
 export default router;

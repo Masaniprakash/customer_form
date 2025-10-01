@@ -181,20 +181,9 @@ export const createCommonData = async (req: Request, res: Response) => {
 
 export const UpdateCommonData = async (req: Request, res: Response) => {
     let body = req.body, err: any;
-    const { customerId, general, plot, billing, flat } = body;
+    const { general, plot, flat } = body;
 
-    if (!customerId) {
-        return ReE(res, { message: "customerId is required" }, httpStatus.BAD_REQUEST);
-    }
-
-    let checkCustomer;
-    [err, checkCustomer] = await toAwait(Customer.findOne({ _id: customerId }));
-    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-    if (!checkCustomer) {
-        return ReE(res, { message: "customer not found for given id" }, httpStatus.BAD_REQUEST);
-    }
-
-    let fields = ["general", "plot", "billing", "flat"];
+    let fields = ["general", "plot", "flat"];
     let inVaildFields = fields.filter(x => !isNull(body[x]));
     if (inVaildFields.length === 0) {
         return ReE(res, { message: `Please enter any one field to update ${fields}!.` }, httpStatus.BAD_REQUEST);
@@ -204,6 +193,16 @@ export const UpdateCommonData = async (req: Request, res: Response) => {
     const errors: any[] = [];
 
     if (general) {
+
+        let keyLength = Object.keys(general).length;
+        if (keyLength === 0) {
+            return ReE(res, { message: `If update general then general object is required` }, httpStatus.BAD_REQUEST);
+        }
+
+        if(!general.editDeleteReason){
+            return ReE(res, { message: `If update general then general.editDeleteReason is required` }, httpStatus.BAD_REQUEST);
+        }
+
         if (general.status) {
             general.status = general.status.toLowerCase();
             let validValue = ["enquired", "blocked", "vacant"]
@@ -214,13 +213,12 @@ export const UpdateCommonData = async (req: Request, res: Response) => {
         }
 
         if (!general._id) {
-            return ReE(res, { message: "when update general then general _id is required" }, httpStatus.BAD_REQUEST);
+            return ReE(res, { message: "when update general then general._id is required" }, httpStatus.BAD_REQUEST);
         }
 
         if (!mongoose.isValidObjectId(general._id)) {
             return ReE(res, { message: "general _id is invalid" }, httpStatus.BAD_REQUEST);
         }
-
 
         let checkAlreadyExist = await General.findOne({ _id: general._id });
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
@@ -230,6 +228,12 @@ export const UpdateCommonData = async (req: Request, res: Response) => {
 
 
     if (flat) {
+
+        let keyLength = Object.keys(flat).length;
+        if (keyLength === 0) {
+            return ReE(res, { message: `If update flat then flat object is required` }, httpStatus.BAD_REQUEST);
+        }
+
         if (!flat._id) {
             return ReE(res, { message: "when update flat then flat _id is required" }, httpStatus.BAD_REQUEST);
         }
@@ -244,8 +248,14 @@ export const UpdateCommonData = async (req: Request, res: Response) => {
     }
 
     if (plot) {
+
+        let keyLength = Object.keys(plot).length;
+        if (keyLength === 0) {
+            return ReE(res, { message: `If update plot then plot object is required` }, httpStatus.BAD_REQUEST);
+        }
+
         if (!plot._id) {
-            return ReE(res, { message: "when update plot then plot _id is required" }, httpStatus.BAD_REQUEST);
+            return ReE(res, { message: "when update plot then plot._id is required" }, httpStatus.BAD_REQUEST);
         }
 
         if (!mongoose.isValidObjectId(plot._id)) {
@@ -265,16 +275,6 @@ export const UpdateCommonData = async (req: Request, res: Response) => {
         }
         results.general = updateGeneral;
         results.message = "general updated successfully";
-    }
-
-    if (billing) {
-        let updateBilling;
-        [err, updateBilling] = await toAwait(Billing.updateOne({ _id: billing._id }, billing));
-        if (err) {
-            errors.push(`error in while updating billing: ${err.message}`);
-        }
-        results.billing = updateBilling;
-        results.message = "billing updated successfully";
     }
 
     if (plot) {
@@ -694,8 +694,6 @@ export const createBilling = async (req: Request, res: Response) => {
         saleType = saleType === "plot" ? "Plot" : saleType === "flat" ? "Flat" : "Villa";
     }
 
-
-
     let checkGeneral;
     [err, checkGeneral] = await toAwait(General.findOne({ _id: checkEmi.general }));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
@@ -1003,3 +1001,52 @@ export const getDataBasedOnGeneralById = async (req: Request, res: Response) => 
 
     return ReS(res, { message: "success", data: result }, httpStatus.OK);
 };
+
+//when pass cusId and emiId checkEmi belong to that customer
+export const checkEmi = async (req: Request, res: Response) => {
+    let body = req.body, err;
+    let { customerId, emiId } = body;
+    if (!customerId) {
+        return ReE(res, { message: `customerId is required!` }, httpStatus.BAD_REQUEST);
+    }
+    if (!emiId) {
+        return ReE(res, { message: `emiId is required!` }, httpStatus.BAD_REQUEST);
+    }
+    if (!mongoose.isValidObjectId(customerId)) {
+        return ReE(res, { message: `Invalid customerId!` }, httpStatus.BAD_REQUEST);
+    }
+    if (!mongoose.isValidObjectId(emiId)) {
+        return ReE(res, { message: `Invalid emiId!` }, httpStatus.BAD_REQUEST);
+    }
+    let checkEmi;
+    [err, checkEmi] = await toAwait(Emi.findOne({ _id: emiId }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    if (!checkEmi) {
+        return ReE(res, { message: `emi not found for given id!.` }, httpStatus.NOT_FOUND)
+    }
+    checkEmi = checkEmi as IEmi
+    let checkCustomer;
+    [err, checkCustomer] = await toAwait(Customer.findOne({ _id: customerId }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    if (!checkCustomer) {
+        return ReE(res, { message: `customer not found for given id!.` }, httpStatus.NOT_FOUND)
+    }
+    checkCustomer = checkCustomer as any
+    if (checkEmi.customer.toString() !== checkCustomer._id.toString()) {
+        return ReE(res, { message: `This emi doesn't belong to this customer!` }, httpStatus.NOT_FOUND)
+    }
+    let getGeneral;
+    [err, getGeneral] = await toAwait(General.findOne({_id:checkEmi.general}));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    if (!getGeneral) {
+        return ReE(res, { message: `general not found for given emi id so can't do billing!.` }, httpStatus.NOT_FOUND)
+    }
+    getGeneral = getGeneral as IGeneral
+    if (getGeneral.status   === "blocked") {
+        return ReE(res, { message: `This general is blocked so can't do billing!` }, httpStatus.NOT_FOUND)
+    }
+    if(checkEmi?.paidAmt){
+        return ReE(res, { message: `This emi is already paid!` }, httpStatus.NOT_FOUND)
+    }
+    ReS(res, { message: "emi found", data: checkEmi }, httpStatus.OK)
+}
