@@ -22,6 +22,7 @@ import { Marketer } from "../models/marketer";
 import { IEmi } from "../type/emi";
 import { ICustomer } from "../type/customer";
 import IMarketer from "../type/Marketer";
+import CustomRequest from "../type/customRequest";
 
 
 export const uploadImages = async (req: Request, res: Response) => {
@@ -179,9 +180,16 @@ export const createCommonData = async (req: Request, res: Response) => {
     return ReS(res, { message: "success", data: results }, httpStatus.OK);
 };
 
-export const UpdateCommonData = async (req: Request, res: Response) => {
-    let body = req.body, err: any;
+export const UpdateCommonData = async (req: CustomRequest, res: Response) => {
+    let body = req.body, user = req.user, err: any;
     const { general, plot, flat } = body;
+
+    if(user){
+        if(user.isAdmin === false){
+            return ReE(res, { message: "You are not access this api" }, httpStatus.UNAUTHORIZED);
+        }
+
+    }
 
     let fields = ["general", "plot", "flat"];
     let inVaildFields = fields.filter(x => !isNull(body[x]));
@@ -1014,7 +1022,7 @@ export const checkEmi = async (req: Request, res: Response) => {
         return ReE(res, { message: `Invalid customerId!` }, httpStatus.BAD_REQUEST);
     }
     if (!mongoose.isValidObjectId(emiId)) {
-        return ReE(res, { message: `Invalid emiId!` }, httpStatus.BAD_REQUEST);
+        return ReE(res, { message: `Invalid emi id!` }, httpStatus.BAD_REQUEST);
     }
     let checkEmi;
     [err, checkEmi] = await toAwait(Emi.findOne({ _id: emiId }));
@@ -1031,7 +1039,7 @@ export const checkEmi = async (req: Request, res: Response) => {
     }
     checkCustomer = checkCustomer as any
     if (checkEmi.customer.toString() !== checkCustomer._id.toString()) {
-        return ReE(res, { message: `This emi doesn't belong to this customer!` }, httpStatus.NOT_FOUND)
+        return ReE(res, { message: `This emi doesn't belong to this customer!` }, httpStatus.BAD_REQUEST)
     }
     let getGeneral;
     [err, getGeneral] = await toAwait(General.findOne({_id:checkEmi.general}));

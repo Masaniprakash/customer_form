@@ -310,6 +310,6 @@ export const login = async (req: Request, res: Response) => {
 
     const token = jwt.sign({ userId: typedUser._id }, secretKey);
 
-    return ReS(res, { message: "User logged in successfully", token }, httpStatus.OK);
+    return ReS(res, { message: "User logged in successfully", token, isAdmin: typedUser.isAdmin , roleId: typedUser.role }, httpStatus.OK);
 
 }

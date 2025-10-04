@@ -19,6 +19,7 @@ import cors from "cors";
 import path from "path";
 import plotBookingFormRoutes from "./routes/plotBookingForm.routes";
 import lifeSacingRoutes from "./routes/lifeSaving.routes";
+import editRequestRoutes from "./routes/edietRequest.routes"
 import { IEmi } from "./type/emi";
 import { Emi } from "./models/emi.model";
 import { General } from "./models/general.model";
@@ -55,6 +56,7 @@ app.use("/api/user", user);
 app.use("/api/common", common);
 app.use("/api/plot/booking", plotBookingFormRoutes);
 app.use("/api/life/saving", lifeSacingRoutes);
+app.use("/api/edit/request", editRequestRoutes);
 
 cron.schedule("02 00 * * *", async () => {
   console.log("Running cron job");
