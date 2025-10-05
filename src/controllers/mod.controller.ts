@@ -5,6 +5,10 @@ import { Mod } from "../models/mod.model";
 import { IMOD } from "../type/mod";
 import mongoose from "mongoose";
 import { Customer } from "../models/customer.model";
+import CustomRequest from "../type/customRequest";
+import { IUser } from "../type/user";
+import EditRequest from "../models/editRequest.model";
+import { IEditRequest } from "../type/editRequest";
 
 export const createMod = async (req: Request, res: Response) => {
     let body = req.body, err;
@@ -35,8 +39,11 @@ export const createMod = async (req: Request, res: Response) => {
     ReS(res, { message: `mod added successfull` }, httpStatus.CREATED);
 };
 
-export const updateMod = async (req: Request, res: Response) => {
-    const body = req.body;
+export const updateMod = async (req: CustomRequest, res: Response) => {
+    const body = req.body, user= req.user as IUser;
+
+    if(!user) return ReE(res, { message: "authentication not added in this api please contact admin" }, httpStatus.NOT_FOUND);
+
     let err: any;
     let { _id, date, siteName, plotNo, customer, introducerName, introducerPhone, directorName, directorPhone, EDName, EDPhone, amount, status } = body;
     let fields = ["date", "siteName", "plotNo", "customer", "introducerName", "introducerPhone", "directorName", "directorPhone", "EDName", "EDPhone", "amount", "status"];
@@ -66,7 +73,8 @@ export const updateMod = async (req: Request, res: Response) => {
     if (updateFields.date) {
         if (!isValidDate(updateFields.date)) {
             return ReE(res, {
-                message: `Invalid date, valid format is (YYYY-MM-DD)!.` }, httpStatus.BAD_REQUEST);
+                message: `Invalid date, valid format is (YYYY-MM-DD)!.`
+            }, httpStatus.BAD_REQUEST);
         }
     }
 
@@ -82,11 +90,65 @@ export const updateMod = async (req: Request, res: Response) => {
         }
     }
 
-    const [updateErr, updateResult] = await toAwait(
-        Mod.updateOne({ _id }, { $set: updateFields })
-    );
-    if (updateErr) return ReE(res, updateErr, httpStatus.INTERNAL_SERVER_ERROR)
-    return ReS(res, { message: "Mod updated successfully." }, httpStatus.OK);
+    if (user.isAdmin === false) {
+        const changes: { field: string; oldValue: any; newValue: any }[] = [];
+        fields.forEach((key: any) => {
+            const newValue = body[key];
+            const oldValue = (getMod as any)[key];
+            if (isNull(newValue)) return
+            if (newValue.toString() !== oldValue.toString()) {
+                changes.push({ field: key, oldValue, newValue });
+            }
+        });
+
+        if (changes.length === 0) {
+            return ReE(res, { message: "No changes found to update." }, httpStatus.BAD_REQUEST);
+        }
+
+        let checkEditRequest;
+        [err, checkEditRequest] = await toAwait(
+            EditRequest.findOne({ targetId: _id, editedBy: user._id })
+        )
+
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (checkEditRequest) {
+            checkEditRequest = checkEditRequest as IEditRequest;
+            let get = []
+            checkEditRequest.changes.forEach((change) => {
+                if (changes.some((c) => c.field.toString() === change.field.toString())) {
+                    get.push(change)
+                }
+            })
+            if (checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending") {
+                return ReE(res, { message: "You already have a pending edit request for this mod." }, httpStatus.BAD_REQUEST);
+            }
+        }
+
+        let createReq;
+        [err, createReq] = await toAwait(
+            EditRequest.create({
+                targetModel: "Mod",
+                targetId: _id,
+                editedBy: user._id,
+                changes,
+                status: "pending"
+            })
+        );
+
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+        return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+    } else {
+
+        const [updateErr, updateResult] = await toAwait(
+            Mod.updateOne({ _id }, { $set: updateFields })
+        );
+        if (updateErr) return ReE(res, updateErr, httpStatus.INTERNAL_SERVER_ERROR)
+        return ReS(res, { message: "Mod updated successfully." }, httpStatus.OK);
+
+    }
+
 };
 
 export const getByIdMod = async (req: Request, res: Response) => {

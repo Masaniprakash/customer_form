@@ -5,6 +5,10 @@ import { MarketingHead } from "../models/marketingHead.model";
 import { IMarketingHead } from "../type/marketingHead";
 import mongoose from "mongoose";
 import { Percentage } from "../models/percentage.model";
+import EditRequest from "../models/editRequest.model";
+import { IUser } from "../type/user";
+import CustomRequest from "../type/customRequest";
+import { IEditRequest } from "../type/editRequest";
 
 export const createMarketingHead = async (req: Request, res: Response) => {
     let body = req.body, err;
@@ -63,8 +67,9 @@ export const createMarketingHead = async (req: Request, res: Response) => {
     ReS(res, { message: `marketing_head added successfull` }, httpStatus.CREATED);
 };
 
-export const updateMarketingHead = async (req: Request, res: Response) => {
-    const body = req.body;
+export const updateMarketingHead = async (req: CustomRequest, res: Response) => {
+    const body = req.body, user = req.user as IUser;
+    if(!user) return ReE(res, { message: "authentication not added in this api please contact admin" }, httpStatus.NOT_FOUND);
     let { _id, name, email, gender, age, phone, address, status, percentageId } = body;
     let err: any;
     if (!_id) {
@@ -102,6 +107,8 @@ export const updateMarketingHead = async (req: Request, res: Response) => {
     if (!getMarketing_head) {
         return ReE(res, { message: `marketing_head not found for given id!.` }, httpStatus.NOT_FOUND)
     }
+
+    getMarketing_head = getMarketing_head as IMarketingHead;
 
     const updateFields: Record<string, any> = {};
     for (const key of fields) {
@@ -141,11 +148,64 @@ export const updateMarketingHead = async (req: Request, res: Response) => {
         if (!checkPer) return ReE(res, { message: "Percentage is not found for given id" }, httpStatus.NOT_FOUND)
     }
 
-    const [updateErr, updateResult] = await toAwait(
-        MarketingHead.updateOne({ _id }, { $set: updateFields })
-    );
-    if (updateErr) return ReE(res, updateErr, httpStatus.INTERNAL_SERVER_ERROR)
-    return ReS(res, { message: "Marketing_head updated successfully." }, httpStatus.OK);
+    if (user.isAdmin === false) {
+        const changes: { field: string; oldValue: any; newValue: any }[] = [];
+        fields.forEach((key: any) => {
+            const newValue = body[key];
+            const oldValue = (getMarketing_head as any)[key];
+            if (isNull(newValue)) return
+            if (newValue.toString() !== oldValue.toString()) {
+                changes.push({ field: key, oldValue, newValue });
+            }
+        });
+
+        if (changes.length === 0) {
+            return ReE(res, { message: "No changes found to update." }, httpStatus.BAD_REQUEST);
+        }
+
+        let checkEditRequest;
+        [err, checkEditRequest] = await toAwait(
+            EditRequest.findOne({ targetId: _id, editedBy: user._id })
+        )
+
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (checkEditRequest) {
+            checkEditRequest = checkEditRequest as IEditRequest;
+            let get = []
+            checkEditRequest.changes.forEach((change) => {
+                if (changes.some((c) => c.field.toString() === change.field.toString())) {
+                    get.push(change)
+                }
+            })
+            if (checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending") {
+                return ReE(res, { message: "You already have a pending edit request for this marketDetail." }, httpStatus.BAD_REQUEST);
+            }
+        }
+
+        let createReq;
+        [err, createReq] = await toAwait(
+            EditRequest.create({
+                targetModel: "MarketingHead",
+                targetId: _id,
+                editedBy: user._id,
+                changes,
+                status: "pending",
+            })
+        );
+
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+        return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+    } else {
+
+        const [updateErr, updateResult] = await toAwait(
+            MarketingHead.updateOne({ _id }, { $set: updateFields })
+        );
+        if (updateErr) return ReE(res, updateErr, httpStatus.INTERNAL_SERVER_ERROR)
+        return ReS(res, { message: "Marketing_head updated successfully." }, httpStatus.OK);
+
+    }
 };
 
 export const getByIdMarketingHead = async (req: Request, res: Response) => {

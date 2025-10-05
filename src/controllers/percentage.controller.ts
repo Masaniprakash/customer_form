@@ -1,11 +1,14 @@
 import { Request, Response } from "express";
-import { isNull, isPhone , ReE, ReS, toAwait } from "../services/util.service";
+import { isNull, isPhone, ReE, ReS, toAwait } from "../services/util.service";
 import httpStatus from "http-status";
 import { Percentage } from "../models/percentage.model";
 import { IPercentage } from "../type/percentage";
 import mongoose from "mongoose";
 import { MarketingHead } from "../models/marketingHead.model";
-
+import EditRequest from "../models/editRequest.model";
+import CustomRequest from "../type/customRequest";
+import { IUser } from "../type/user";
+import { IEditRequest } from "../type/editRequest";
 export const createPercentage = async (req: Request, res: Response) => {
     let body = req.body, err;
     let { name, rate } = body;
@@ -32,8 +35,9 @@ export const createPercentage = async (req: Request, res: Response) => {
     ReS(res, { message: `percentage added successfull` }, httpStatus.CREATED);
 };
 
-export const updatePercentage = async (req: Request, res: Response) => {
-    const body = req.body;
+export const updatePercentage = async (req: CustomRequest, res: Response) => {
+    const body = req.body, user = req.user as IUser;
+    if(!user) return ReE(res, { message: `authentication not added in this api please contact admin!` }, httpStatus.UNAUTHORIZED);
     let err: any;
     let { _id, name, rate } = body;
     let fields = ["name", "rate"];
@@ -70,11 +74,63 @@ export const updatePercentage = async (req: Request, res: Response) => {
         }
     }
 
-    const [updateErr, updateResult] = await toAwait(
-        Percentage.updateOne({ _id }, { $set: updateFields })
-    );
-    if (updateErr) return ReE(res, updateErr, httpStatus.INTERNAL_SERVER_ERROR)
-    return ReS(res, { message: "Percentage updated successfully." }, httpStatus.OK);
+    if (user.isAdmin === false) {
+        const changes: { field: string; oldValue: any; newValue: any }[] = [];
+        fields.forEach((key: any) => {
+            const newValue = body[key];
+            const oldValue = (getPercentage as any)[key];
+            if (isNull(newValue)) return
+            if (newValue.toString() !== oldValue.toString()) {
+                changes.push({ field: key, oldValue, newValue });
+            }
+        });
+
+        if (changes.length === 0) {
+            return ReE(res, { message: "No changes found to update." }, httpStatus.BAD_REQUEST);
+        }
+
+        let checkEditRequest;
+        [err, checkEditRequest] = await toAwait(
+            EditRequest.findOne({ targetId: _id, editedBy: user._id })
+        )
+
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (checkEditRequest) {
+            checkEditRequest = checkEditRequest as IEditRequest;
+            let get = []
+            checkEditRequest.changes.forEach((change) => {
+                if (changes.some((c) => c.field.toString() === change.field.toString())) {
+                    get.push(change)
+                }
+            })
+            if (checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending") {
+                return ReE(res, { message: "You already have a pending edit request for this percentage." }, httpStatus.BAD_REQUEST);
+            }
+        }
+
+        let createReq;
+        [err, createReq] = await toAwait(
+            EditRequest.create({
+                targetModel: "Percentage",
+                targetId: _id,
+                editedBy: user._id,
+                changes,
+                status: "pending"
+            })
+        );
+
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+        return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+    } else {
+
+        const [updateErr, updateResult] = await toAwait(
+            Percentage.updateOne({ _id }, { $set: updateFields })
+        );
+        if (updateErr) return ReE(res, updateErr, httpStatus.INTERNAL_SERVER_ERROR)
+        return ReS(res, { message: "Percentage updated successfully." }, httpStatus.OK);
+    }
 };
 
 export const getByIdPercentage = async (req: Request, res: Response) => {

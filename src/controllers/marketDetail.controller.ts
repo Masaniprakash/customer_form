@@ -5,11 +5,15 @@ import { MarketDetail } from "../models/marketDetail.model";
 import { IMarketDetail } from "../type/marketDetail";
 import mongoose from "mongoose";
 import { MarketingHead } from "../models/marketingHead.model";
+import CustomRequest from "../type/customRequest";
+import { IUser } from "../type/user";
+import EditRequest from "../models/editRequest.model";
+import { IEditRequest } from "../type/editRequest";
 
 export const createMarketDetail = async (req: Request, res: Response) => {
     let body = req.body, err;
     let { headBy, phone, address, status, name } = body;
-    let fields = ["headBy", "phone", "address", "status","name"];
+    let fields = ["headBy", "phone", "address", "status", "name"];
     let inVaildFields = fields.filter(x => isNull(body[x]));
     if (inVaildFields.length > 0) {
         return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
@@ -43,8 +47,8 @@ export const createMarketDetail = async (req: Request, res: Response) => {
     ReS(res, { message: `marketDetail added successfull` }, httpStatus.CREATED);
 };
 
-export const updateMarketDetail = async (req: Request, res: Response) => {
-    const body = req.body;
+export const updateMarketDetail = async (req: CustomRequest, res: Response) => {
+    const body = req.body, user = req.user as IUser;
     let err: any;
     let { _id, headBy, phone, address, status, name } = body;
     let fields = ["headBy", "phone", "address", "status", 'name'];
@@ -95,11 +99,68 @@ export const updateMarketDetail = async (req: Request, res: Response) => {
         }
     }
 
-    const [updateErr, updateResult] = await toAwait(
-        MarketDetail.updateOne({ _id }, { $set: updateFields })
-    );
-    if (updateErr) return ReE(res, updateErr, httpStatus.INTERNAL_SERVER_ERROR)
-    return ReS(res, { message: "MarketDetail updated successfully." }, httpStatus.OK);
+    if (user.isAdmin === false) {
+
+        const changes: { field: string; oldValue: any; newValue: any }[] = [];
+        fields.forEach((key:any) => {
+            const newValue = body[key];
+            const oldValue = (getMarketDetail as any)[key];
+            if(isNull(newValue)) return
+            if (newValue.toString() !== oldValue.toString()) {
+                changes.push({ field: key, oldValue, newValue });
+            }
+        });
+
+        if (changes.length === 0) {
+            return ReE(res, { message: "No changes found to update." }, httpStatus.BAD_REQUEST);
+        }
+
+        let checkEditRequest;
+        [err, checkEditRequest] = await toAwait(
+            EditRequest.findOne({ targetId: _id, editedBy: user._id })
+        )
+
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (checkEditRequest) {
+            checkEditRequest = checkEditRequest as IEditRequest;
+            let get=[]
+            checkEditRequest.changes.forEach((change) => {
+                if (changes.some((c) => c.field.toString() === change.field.toString())) {
+                    get.push(change)
+                }
+            })
+            if(checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending"){
+                return ReE(res, { message: "You already have a pending edit request for this marketDetail." }, httpStatus.BAD_REQUEST);
+            }
+        }
+
+        let createReq;
+        [err, createReq] = await toAwait(
+            EditRequest.create({
+                targetModel: "MarketDetail",
+                targetId: _id,
+                editedBy: user._id,
+                changes,
+                status: "pending",
+            })
+        );
+
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+        return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+    }else{
+
+        let updateResult;
+
+        [err, updateResult] = await toAwait(
+            MarketDetail.updateOne({ _id }, { $set: updateFields })
+        );
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR)
+        return ReS(res, { message: "MarketDetail updated successfully." }, httpStatus.OK);
+
+    }
+
 };
 
 export const getByIdMarketDetail = async (req: Request, res: Response) => {
