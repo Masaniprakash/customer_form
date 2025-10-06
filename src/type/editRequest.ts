@@ -10,8 +10,17 @@ export interface IEditRequest extends Document {
     oldValue: any;
     newValue: any;
   }[];
+  createrChanges:{
+    field: string;
+    value: any;
+  }[];
   status: "pending" | "approved" | "rejected";
   approvedBy?: mongoose.Types.ObjectId;
+  secondaryId?: mongoose.Types.ObjectId;
+  deletedId?: mongoose.Types.ObjectId;
+  deletedTableName?: string;
+  createrId: mongoose.Types.ObjectId;
+  createrTableName: string;
   createdAt: Date;
   updatedAt: Date;
 }

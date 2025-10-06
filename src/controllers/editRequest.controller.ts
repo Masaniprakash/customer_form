@@ -91,6 +91,19 @@ export const approvedEditRequest = async (req: CustomRequest, res: Response) => 
             );
         }
 
+        if(checkEdit.deletedId && checkEdit.deletedTableName){
+            const deletedModelName = checkEdit.deletedTableName;
+            const deletedModel = mongoose.models[checkEdit.deletedTableName];
+            if (!deletedModel) {
+                return ReE(
+                    res,
+                    { message: `Model '${deletedModelName}' not found in mongoose models!` },
+                    httpStatus.BAD_REQUEST
+                );
+            }
+            await deletedModel.deleteOne({ _id: checkEdit.deletedId });
+        }
+
         return ReS(res, { message: `Edit request approved successfully` }, httpStatus.OK);
     } catch (ex: any) {
         return ReE(res, ex, httpStatus.INTERNAL_SERVER_ERROR);
@@ -118,7 +131,7 @@ export const getAllEditRequest = async (req: CustomRequest, res: Response) => {
         }
     }
 
-    [err, getUser] = await toAwait(EditRequest.find(option).populate('approvedBy').populate('editedBy'));
+    [err, getUser] = await toAwait(EditRequest.find(option).populate('approvedBy').populate('editedBy').populate('deletedId'));
 
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     getUser = getUser as IEditRequest[]

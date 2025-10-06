@@ -4,6 +4,10 @@ import httpStatus from "http-status";
 import { Customer } from "../models/customer.model";
 import { ICustomer } from "../type/customer";
 import mongoose from "mongoose";
+import EditRequest from "../models/editRequest.model";
+import { IUser } from "../type/user";
+import CustomRequest from "../type/customRequest";
+import { IEditRequest } from "../type/editRequest";
 
 export const createCustomer = async (req: Request, res: Response) => {
   let body = req.body, err;
@@ -42,8 +46,8 @@ export const createCustomer = async (req: Request, res: Response) => {
   ReS(res, { message: `customer added successfull` }, httpStatus.CREATED);
 };
 
-export const updateCustomer = async (req: Request, res: Response) => {
-  const body = req.body;
+export const updateCustomer = async (req: CustomRequest, res: Response) => {
+  const body = req.body, user = req.user as IUser;
   const { _id } = body;
   let err: any;
 
@@ -54,7 +58,6 @@ export const updateCustomer = async (req: Request, res: Response) => {
   if (!mongoose.isValidObjectId(_id)) {
     return ReE(res, { message: `Invalid customer _id!` }, httpStatus.BAD_REQUEST);
   }
-
 
   let getCustomer;
   [err, getCustomer] = await toAwait(Customer.findOne({ _id: _id }));
@@ -109,11 +112,67 @@ export const updateCustomer = async (req: Request, res: Response) => {
     }
   }
 
-  const [updateErr, updateResult] = await toAwait(
-    Customer.updateOne({ _id }, { $set: updateFields })
-  );
-  if (updateErr) return ReE(res, updateErr, httpStatus.INTERNAL_SERVER_ERROR)
-  return ReS(res, { message: "Customer updated successfully." }, httpStatus.OK);
+  if (user.isAdmin === false) {
+
+    const changes: { field: string; oldValue: any; newValue: any }[] = [];
+    allowedFields.forEach((key: any) => {
+      const newValue = body[key];
+      const oldValue = (getCustomer as any)[key];
+      if (isNull(newValue)) return
+      if (newValue.toString() !== oldValue.toString()) {
+        changes.push({ field: key, oldValue, newValue });
+      }
+    });
+
+    if (changes.length === 0) {
+      return ReE(res, { message: "No changes found to update." }, httpStatus.BAD_REQUEST);
+    }
+
+    let checkEditRequest;
+    [err, checkEditRequest] = await toAwait(
+      EditRequest.findOne({ targetId: _id, editedBy: user._id })
+    )
+
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    if (checkEditRequest) {
+      checkEditRequest = checkEditRequest as IEditRequest;
+      let get = []
+      checkEditRequest.changes.forEach((change) => {
+        if (changes.some((c) => c.field.toString() === change.field.toString())) {
+          get.push(change)
+        }
+      })
+      if (checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending") {
+        return ReE(res, { message: "You already have a pending edit request for this marketDetail." }, httpStatus.BAD_REQUEST);
+      }
+    }
+
+    let createReq;
+    [err, createReq] = await toAwait(
+      EditRequest.create({
+        targetModel: "Customer",
+        targetId: _id,
+        editedBy: user._id,
+        changes,
+        status: "pending",
+      })
+    );
+
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+  } else {
+
+
+    const [updateErr, updateResult] = await toAwait(
+      Customer.updateOne({ _id }, { $set: updateFields })
+    );
+    if (updateErr) return ReE(res, updateErr, httpStatus.INTERNAL_SERVER_ERROR)
+    return ReS(res, { message: "Customer updated successfully." }, httpStatus.OK);
+
+  }
+
 };
 
 export const getByIdCustomer = async (req: Request, res: Response) => {
@@ -149,7 +208,7 @@ export const getAllCustomer = async (req: Request, res: Response) => {
 
 export const deleteCustomer = async (req: Request, res: Response) => {
   let err, { _id } = req.body;
-  if(!_id){
+  if (!_id) {
     return ReE(res, { message: `Customer _id is required!` }, httpStatus.BAD_REQUEST);
   }
   if (!mongoose.isValidObjectId(_id)) {
@@ -161,7 +220,7 @@ export const deleteCustomer = async (req: Request, res: Response) => {
   if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
   if (!checkUser) {
     return ReE(res, { message: `customer not found for given id!.` }, httpStatus.NOT_FOUND)
-    }
+  }
 
   let deleteUser;
   [err, deleteUser] = await toAwait(Customer.deleteOne({ _id: _id }));

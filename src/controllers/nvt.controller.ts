@@ -7,6 +7,10 @@ import mongoose from "mongoose";
 import { Customer } from "../models/customer.model";
 import { IMOD } from "../type/mod";
 import { Mod } from "../models/mod.model";
+import EditRequest from "../models/editRequest.model";
+import CustomRequest from "../type/customRequest";
+import { IUser } from "../type/user";
+import { IEditRequest } from "../type/editRequest";
 
 export const createNvt = async (req: Request, res: Response) => {
     let body = req.body, err;
@@ -71,8 +75,8 @@ export const createNvt = async (req: Request, res: Response) => {
     ReS(res, { message: `nvt added successfull` }, httpStatus.CREATED);
 };
 
-export const updateNvt = async (req: Request, res: Response) => {
-    const body = req.body;
+export const updateNvt = async (req: CustomRequest, res: Response) => {
+    const body = req.body, user = req.user as IUser;
     let err: any;
     let { mod, nvt } = body
     if (!nvt) {
@@ -114,6 +118,7 @@ export const updateNvt = async (req: Request, res: Response) => {
             return ReE(res, { message: `customer is not found given id: ${customer}!.` }, httpStatus.NOT_FOUND);
         }
     }
+
     if (conversion) {
         if (typeof conversion !== 'boolean') {
             return ReE(res, "nvt.conversion must be boolean", httpStatus.BAD_REQUEST);
@@ -154,6 +159,7 @@ export const updateNvt = async (req: Request, res: Response) => {
             }
         }
     }
+
     let updateFields: Record<string, any> = {};
     for (const key of fields) {
         if (!isNull(nvt[key])) {
@@ -168,18 +174,80 @@ export const updateNvt = async (req: Request, res: Response) => {
     }
 
     if (!isEmpty(updateFields)) {
-        [err, createMod] = await toAwait(Nvt.updateOne({ _id: nvt._id }, { $set: updateFields }));
-        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-        if (!createMod) {
-            return ReE(res, { message: `Failed to update mod!.` }, httpStatus.INTERNAL_SERVER_ERROR)
-        }
 
-        if (needMod === false && checkNvt.needMod === true) {
-            let removeMod;
-            [err, removeMod] = await toAwait(Mod.deleteOne({ _id: checkNvt.mod }));
+        if (user.isAdmin === false) {
+
+            const changes: { field: string; oldValue: any; newValue: any }[] = [];
+            fields.forEach((key: any) => {
+                const newValue = nvt[key];
+                const oldValue = (checkNvt as any)[key];
+                if (isNull(newValue)) return
+                if (newValue.toString() !== oldValue.toString()) {
+                    changes.push({ field: key, oldValue, newValue });
+                }
+            });
+
+            if (changes.length === 0) {
+                return ReE(res, { message: "No changes found to update nvt." }, httpStatus.BAD_REQUEST);
+            }
+
+            let checkEditRequest;
+            [err, checkEditRequest] = await toAwait(
+                EditRequest.findOne({ targetId: nvt._id, editedBy: user._id })
+            )
+
             if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-            if (!removeMod) {
-                return ReE(res, { message: `Failed to remove mod!.` }, httpStatus.INTERNAL_SERVER_ERROR)
+            if (checkEditRequest) {
+                checkEditRequest = checkEditRequest as IEditRequest;
+                let get = []
+                checkEditRequest.changes.forEach((change) => {
+                    if (changes.some((c) => c.field.toString() === change.field.toString())) {
+                        get.push(change)
+                    }
+                })
+                if (checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending") {
+                    return ReE(res, { message: "You already have a pending edit request for this marketDetail." }, httpStatus.BAD_REQUEST);
+                }
+            }
+
+            let option:any = {
+                targetModel: "Nvt",
+                targetId: nvt._id,
+                editedBy: user._id,
+                changes,
+                status: "pending",
+            }
+
+            if (needMod === false && checkNvt.needMod === true) {
+                option = { ...option, deletedId: checkNvt.mod, deletedTableName: "Mod" }
+            }
+
+            let createReq;
+            [err, createReq] = await toAwait(
+                EditRequest.create(option)
+            );
+
+            if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+            return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+        } else {
+
+            let updateNvt
+
+            [err, updateNvt] = await toAwait(Nvt.updateOne({ _id: nvt._id }, { $set: updateFields }));
+            if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+            if (!updateNvt) {
+                return ReE(res, { message: `Failed to update nvt!.` }, httpStatus.INTERNAL_SERVER_ERROR)
+            }
+
+            if (needMod === false && checkNvt.needMod === true) {
+                let removeMod;
+                [err, removeMod] = await toAwait(Mod.deleteOne({ _id: checkNvt.mod }));
+                if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+                if (!removeMod) {
+                    return ReE(res, { message: `Failed to remove nvt!.` }, httpStatus.INTERNAL_SERVER_ERROR)
+                }
             }
         }
     }
@@ -218,7 +286,7 @@ export const getAllNvt = async (req: Request, res: Response) => {
 }
 
 export const getAllNvtCustomer = async (req: Request, res: Response) => {
-    let err, getNvt,id=req.params.id;
+    let err, getNvt, id = req.params.id;
     if (!mongoose.isValidObjectId(id)) {
         return ReE(res, { message: `Invalid nvt id!` }, httpStatus.BAD_REQUEST)
     }
@@ -229,7 +297,7 @@ export const getAllNvtCustomer = async (req: Request, res: Response) => {
         return ReE(res, { message: `customer not found for given id!.` }, httpStatus.BAD_REQUEST)
     }
     [err, getNvt] = await toAwait(Nvt.find({
-        customer:id
+        customer: id
     }).populate("customer").populate("mod"));
 
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
@@ -256,7 +324,7 @@ export const deleteNvt = async (req: Request, res: Response) => {
     if (!checkNvt) {
         return ReE(res, { message: `nvt not found for given id!.` }, httpStatus.NOT_FOUND)
     }
-    if(checkNvt.mod){
+    if (checkNvt.mod) {
         let removeMod;
         [err, removeMod] = await toAwait(Mod.deleteOne({ _id: checkNvt.mod }));
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);

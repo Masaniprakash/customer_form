@@ -19,6 +19,17 @@ const EditRequestSchema: Schema = new Schema<IEditRequest>(
             default: "pending",
         },
         approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        secondaryId: { type: Schema.Types.ObjectId, ref: "EditRequest" },
+        deletedId: { type: Schema.Types.ObjectId },
+        deletedTableName: { type: String },
+        createrId: { type: Schema.Types.ObjectId, ref: "EditRequest" },
+        createrTableName: { type: String },
+        createrChanges:[
+            {
+                field: { type: String, required: true },
+                value: Schema.Types.Mixed,
+            },
+        ]
     },
     { timestamps: true }
 );

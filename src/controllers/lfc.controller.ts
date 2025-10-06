@@ -8,6 +8,10 @@ import { Customer } from "../models/customer.model";
 import { IMOD } from "../type/mod";
 import { Mod } from "../models/mod.model";
 import { Nvt } from "../models/nvt.model";
+import EditRequest from "../models/editRequest.model";
+import { IUser } from "../type/user";
+import { IEditRequest } from "../type/editRequest";
+import CustomRequest from "../type/customRequest";
 
 export const createLfc = async (req: Request, res: Response) => {
   let body = req.body, err;
@@ -24,7 +28,7 @@ export const createLfc = async (req: Request, res: Response) => {
   if (typeof needMod !== 'boolean') {
     return ReE(res, "needMod must be boolean", httpStatus.BAD_REQUEST);
   }
-  if(nvt){
+  if (nvt) {
     if (!Array.isArray(nvt)) {
       return ReE(res, "nvt must be array", httpStatus.BAD_REQUEST);
     }
@@ -94,8 +98,8 @@ export const createLfc = async (req: Request, res: Response) => {
   ReS(res, { message: `lfc added successfull` }, httpStatus.CREATED);
 };
 
-export const updateLfc = async (req: Request, res: Response) => {
-  const body = req.body;
+export const updateLfc = async (req: CustomRequest, res: Response) => {
+  const body = req.body, user = req.user as IUser;
   let err: any;
   let { mod, lfc } = body
   if (!lfc) {
@@ -215,18 +219,79 @@ export const updateLfc = async (req: Request, res: Response) => {
   }
 
   if (!isEmpty(updateFields)) {
-    [err, createMod] = await toAwait(Lfc.updateOne({ _id: lfc._id }, { $set: updateFields }));
-    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-    if (!createMod) {
-      return ReE(res, { message: `Failed to update mod!.` }, httpStatus.INTERNAL_SERVER_ERROR)
-    }
 
-    if (needMod === false && checkLfc.needMod === true) {
-      let removeMod;
-      [err, removeMod] = await toAwait(Mod.deleteOne({ _id: checkLfc.mod }));
+    if (user.isAdmin === false) {
+
+      const changes: { field: string; oldValue: any; newValue: any }[] = [];
+      console.log(fields, checkLfc);
+      fields.forEach((key: any) => {
+        console.log(key);
+        const newValue = lfc[key];
+        const oldValue = (checkLfc as any)[key];
+        if (isNull(newValue)) return
+        if (newValue.toString() !== oldValue.toString()) {
+          changes.push({ field: key, oldValue, newValue });
+        }
+      });
+
+      if (changes.length === 0) {
+        return ReE(res, { message: "No changes found to update nvt." }, httpStatus.BAD_REQUEST);
+      }
+
+      let checkEditRequest;
+      [err, checkEditRequest] = await toAwait(
+        EditRequest.findOne({ targetId: lfc._id, editedBy: user._id })
+      )
+
       if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-      if (!removeMod) {
-        return ReE(res, { message: `Failed to remove mod!.` }, httpStatus.INTERNAL_SERVER_ERROR)
+      if (checkEditRequest) {
+        checkEditRequest = checkEditRequest as IEditRequest;
+        let get = []
+        checkEditRequest.changes.forEach((change) => {
+          if (changes.some((c) => c.field.toString() === change.field.toString())) {
+            get.push(change)
+          }
+        })
+        if (checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending") {
+          return ReE(res, { message: "You already have a pending edit request for this lfc." }, httpStatus.BAD_REQUEST);
+        }
+      }
+
+      let option: any = {
+        targetModel: "Lfc",
+        targetId: lfc._id,
+        editedBy: user._id,
+        changes,
+        status: "pending",
+      }
+
+      if (needMod === false && checkLfc.needMod === true) {
+        option = { ...option, deletedId: checkLfc.mod, deletedTableName: "Mod" }
+      }
+
+      let createReq;
+      [err, createReq] = await toAwait(
+        EditRequest.create(option)
+      );
+
+      if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+      return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+    } else {
+      [err, createMod] = await toAwait(Lfc.updateOne({ _id: lfc._id }, { $set: updateFields }));
+      if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+      if (!createMod) {
+        return ReE(res, { message: `Failed to update mod!.` }, httpStatus.INTERNAL_SERVER_ERROR)
+      }
+
+      if (needMod === false && checkLfc.needMod === true) {
+        let removeMod;
+        [err, removeMod] = await toAwait(Mod.deleteOne({ _id: checkLfc.mod }));
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (!removeMod) {
+          return ReE(res, { message: `Failed to remove mod!.` }, httpStatus.INTERNAL_SERVER_ERROR)
+        }
       }
     }
   }
