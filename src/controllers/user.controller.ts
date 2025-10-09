@@ -68,8 +68,8 @@ export const createUserByAdmin = async (req: Request, res: Response) => {
 
 export const createAdminUser = async (req: Request, res: Response) => {
     let body = req.body, err;
-    let { name, email,  phone, password } = body;
-    let fields = ["name", "email",  "phone", "password"];
+    let { name, email, phone, password } = body;
+    let fields = ["name", "email", "phone", "password"];
     let inVaildFields = fields.filter(x => isNull(body[x]));
     if (inVaildFields.length > 0) {
         return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
@@ -102,7 +102,7 @@ export const createAdminUser = async (req: Request, res: Response) => {
         email,
         phone,
         password: hashedPassword,
-        isAdmin:true
+        isAdmin: true
     }));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     if (!user) {
@@ -293,23 +293,118 @@ export const login = async (req: Request, res: Response) => {
     const secretKey = process.env.JWT_SECRET as string;
     // const expired = process.env.JWT_EXPIRED as string;
 
-    if (!secretKey ) {
+    if (!secretKey) {
         return ReE(res, { message: "Missing JWT_SECRET environment variables" }, httpStatus.INTERNAL_SERVER_ERROR);
     }
 
     let match;
     [err, match] = await toAwait(bcrypt.compare(password, typedUser.password));
-    
+
     if (err) {
         return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     }
-    
+
     if (!match) {
         return ReE(res, { message: "Invalid password" }, httpStatus.UNAUTHORIZED);
     }
 
     const token = jwt.sign({ userId: typedUser._id }, secretKey);
 
-    return ReS(res, { message: "User logged in successfully", token, isAdmin: typedUser.isAdmin , roleId: typedUser.role }, httpStatus.OK);
+    return ReS(res, { message: "User logged in successfully", token, isAdmin: typedUser.isAdmin, roleId: typedUser.role }, httpStatus.OK);
+
+}
+
+export const updateUserByToken = async (req: CustomRequest, res: Response) => {
+    const body = req.body, user = req.user as IUser;
+    let err: any;
+    if(!user) return ReE(res, { message: "authentication not added in this api please contact admin" }, httpStatus.NOT_FOUND);
+
+    let fields = ["name", "phone", "imageUrl"];
+    let inVaildFields = fields.filter(x => !isNull(body[x]));
+    if (inVaildFields.length === 0) {
+        return ReE(res, { message: `Please enter any one fields to update ${fields}!.` }, httpStatus.BAD_REQUEST);
+    }
+
+    const updateFields: Record<string, any> = {};
+    for (const key of fields) {
+        if (!isNull(body[key])) {
+            updateFields[key] = body[key];
+        }
+    }
+
+    if (updateFields.name) {
+        updateFields.name = updateFields.name.toLowerCase().trim();
+        if (updateFields.name.length < 3) {
+            return ReE(res, { message: `name length must be greater than 3 letter` }, httpStatus.BAD_REQUEST);
+        }
+
+    }
+
+    if (updateFields.email) {
+        updateFields.email = updateFields.email.toLowerCase().trim();
+        let checkUser;
+        [err, checkUser] = await toAwait(User.findOne({ email: updateFields.email, _id: { $ne: user._id } }))
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (checkUser) return ReE(res, { message: "email already exist" }, httpStatus.BAD_REQUEST);
+
+    }
+    if (updateFields.phone) {
+        if (!isPhone(updateFields.phone)) {
+            return ReE(res, { message: `Invalid phone number!.` }, httpStatus.BAD_REQUEST)
+        }
+        let checkPhone;
+        [err, checkPhone] = await toAwait(User.findOne({ phone: updateFields.phone, _id: { $ne: user._id } }))
+        if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        if (checkPhone) return ReE(res, { message: "Phone no already exist" }, httpStatus.BAD_REQUEST);
+    }
+
+
+    let updateUser;
+    [err, updateUser] = await toAwait(User.updateOne({ _id: user._id }, updateFields));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR)
+    ReS(res, { message: "user updated" }, httpStatus.OK)
+
+}
+
+export const changePasswordByToken = async (req: CustomRequest, res: Response) => {
+    const body = req.body, user = req.user as IUser;
+    let err: any;
+    if(!user) return ReE(res, { message: "authentication not added in this api please contact admin" }, httpStatus.NOT_FOUND);
+
+    let fields = ["oldPassword", "newPassword"];
+    let inVaildFields = fields.filter(x => !isNull(body[x]));
+    if (inVaildFields.length === 0) {
+        return ReE(res, { message: `Please enter any one fields to update ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
+    }
+
+    const { oldPassword, newPassword } = body;
+
+    let checkUser;
+    [err, checkUser] = await toAwait(User.findOne({ _id: user._id }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    if (!checkUser) {
+        return ReE(res, { message: "User not found" }, httpStatus.NOT_FOUND);
+    }
+
+    checkUser = checkUser as IUser;
+
+    let match;
+    [err, match] = await toAwait(bcrypt.compare(oldPassword, checkUser.password));
+
+    if (err) {
+        return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    if (!match) {
+        return ReE(res, { message: "Invalid old password" }, httpStatus.UNAUTHORIZED);
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    let updateUser;
+    [err, updateUser] = await toAwait(User.updateOne({ _id: user._id }, { password: hashedPassword }));
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR)
+    ReS(res, { message: "password updated" }, httpStatus.OK)
 
 }

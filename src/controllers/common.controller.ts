@@ -78,7 +78,7 @@ export const createCommonData = async (req: Request, res: Response) => {
     let fields = ["general", "plot", "flat"];
     let inVaildFields = fields.filter(x => !isNull(body[x]));
     if (inVaildFields.length === 0) {
-        return ReE(res, { message: `Please enter any one field to create ${fields}!.` }, httpStatus.BAD_REQUEST);
+        return ReE(res, { message: `Please enter required field to create ${fields}!.` }, httpStatus.BAD_REQUEST);
     }
 
     const results: any = {};
