@@ -372,9 +372,9 @@ export const changePasswordByToken = async (req: CustomRequest, res: Response) =
     if(!user) return ReE(res, { message: "authentication not added in this api please contact admin" }, httpStatus.NOT_FOUND);
 
     let fields = ["oldPassword", "newPassword"];
-    let inVaildFields = fields.filter(x => !isNull(body[x]));
-    if (inVaildFields.length === 0) {
-        return ReE(res, { message: `Please enter any one fields to update ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
+    let inVaildFields = fields.filter(x => isNull(body[x]));
+    if (inVaildFields.length > 0) {
+        return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
     }
 
     const { oldPassword, newPassword } = body;
