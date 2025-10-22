@@ -9,6 +9,7 @@ import CustomRequest from "../type/customRequest";
 import { IUser } from "../type/user";
 import EditRequest from "../models/editRequest.model";
 import { IEditRequest } from "../type/editRequest";
+import { sendPushNotificationToSuperAdmin } from "./common";
 
 export const createMod = async (req: Request, res: Response) => {
     let body = req.body, err;
@@ -40,9 +41,9 @@ export const createMod = async (req: Request, res: Response) => {
 };
 
 export const updateMod = async (req: CustomRequest, res: Response) => {
-    const body = req.body, user= req.user as IUser;
+    const body = req.body, user = req.user as IUser;
 
-    if(!user) return ReE(res, { message: "authentication not added in this api please contact admin" }, httpStatus.NOT_FOUND);
+    if (!user) return ReE(res, { message: "authentication not added in this api please contact admin" }, httpStatus.NOT_FOUND);
 
     let err: any;
     let { _id, date, siteName, plotNo, customer, introducerName, introducerPhone, directorName, directorPhone, EDName, EDPhone, amount, status } = body;
@@ -137,8 +138,17 @@ export const updateMod = async (req: CustomRequest, res: Response) => {
 
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-        return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+        createReq = createReq as IEditRequest;
 
+        ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+        let send = await sendPushNotificationToSuperAdmin("Edit request for Mod", `A new edit request for Mod has been created by ${user.name}`, createReq._id.toString())
+
+        if (!send.success) {
+            return console.log(send.message);
+        }
+
+        return console.log("Edit request push notification sent.");
     } else {
 
         const [updateErr, updateResult] = await toAwait(

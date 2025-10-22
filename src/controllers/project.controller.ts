@@ -8,6 +8,7 @@ import EditRequest from "../models/editRequest.model";
 import { IEditRequest } from "../type/editRequest";
 import CustomRequest from "../type/customRequest";
 import { IUser } from "../type/user";
+import { sendPushNotificationToSuperAdmin } from "./common";
 
 export const createProject = async (req: Request, res: Response) => {
   let body = req.body, err;
@@ -28,7 +29,7 @@ export const createProject = async (req: Request, res: Response) => {
 
 export const updateProject = async (req: CustomRequest, res: Response) => {
   const body = req.body, user = req.user as IUser;
-  if(!user) return ReE(res, { message: `authentication not added in this api please contact admin!` }, httpStatus.UNAUTHORIZED);
+  if (!user) return ReE(res, { message: `authentication not added in this api please contact admin!` }, httpStatus.UNAUTHORIZED);
   const { _id } = body;
   let err: any;
 
@@ -106,7 +107,17 @@ export const updateProject = async (req: CustomRequest, res: Response) => {
 
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-    return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+    createReq = createReq as IEditRequest;
+
+    ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+    let send = await sendPushNotificationToSuperAdmin("Edit request for Project", `A new edit request for Project has been created by ${user.name}`, createReq._id.toString())
+
+    if (!send.success) {
+      return console.log(send.message);
+    }
+
+    return console.log("Edit request push notification sent.");
 
   } else {
 

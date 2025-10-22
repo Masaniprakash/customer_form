@@ -11,6 +11,7 @@ import EditRequest from "../models/editRequest.model";
 import CustomRequest from "../type/customRequest";
 import { IUser } from "../type/user";
 import { IEditRequest } from "../type/editRequest";
+import { sendPushNotificationToSuperAdmin } from "./common";
 
 export const createNvt = async (req: Request, res: Response) => {
     let body = req.body, err;
@@ -210,7 +211,7 @@ export const updateNvt = async (req: CustomRequest, res: Response) => {
                 }
             }
 
-            let option:any = {
+            let option: any = {
                 targetModel: "Nvt",
                 targetId: nvt._id,
                 editedBy: user._id,
@@ -229,8 +230,17 @@ export const updateNvt = async (req: CustomRequest, res: Response) => {
 
             if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-            return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+            createReq = createReq as IEditRequest;
 
+            ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+            let send = await sendPushNotificationToSuperAdmin("Edit request for NVT", `A new edit request for NVT has been created by ${user.name}`, createReq._id.toString())
+
+            if (!send.success) {
+                return console.log(send.message);
+            }
+
+            return console.log("Edit request push notification sent.");
         } else {
 
             let updateNvt

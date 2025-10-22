@@ -9,6 +9,7 @@ import EditRequest from "../models/editRequest.model";
 import { IUser } from "../type/user";
 import CustomRequest from "../type/customRequest";
 import { IEditRequest } from "../type/editRequest";
+import { sendPushNotificationToSuperAdmin } from "./common";
 
 export const createMarketingHead = async (req: Request, res: Response) => {
     let body = req.body, err;
@@ -178,7 +179,7 @@ export const updateMarketingHead = async (req: CustomRequest, res: Response) => 
                 }
             })
             if (checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending") {
-                return ReE(res, { message: "You already have a pending edit request for this marketDetail." }, httpStatus.BAD_REQUEST);
+                return ReE(res, { message: "You already have a pending edit request for this marketingHead." }, httpStatus.BAD_REQUEST);
             }
         }
 
@@ -195,7 +196,17 @@ export const updateMarketingHead = async (req: CustomRequest, res: Response) => 
 
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-        return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+        createReq = createReq as IEditRequest;
+
+        ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+        let send = await sendPushNotificationToSuperAdmin("Edit request for marketingHead", `A new edit request for marketingHead has been created by ${user.name}`, createReq._id.toString())
+
+        if (!send.success) {
+            return console.log(send.message);
+        }
+
+        return console.log("Edit request push notification sent.");
 
     } else {
 

@@ -24,6 +24,7 @@ import { IEmi } from "./type/emi";
 import { Emi } from "./models/emi.model";
 import { General } from "./models/general.model";
 import cron from "node-cron";
+import { initializeFirebase } from './util/firebaseConfig';
 
 const app = express();
 app.use(express.json());
@@ -39,6 +40,8 @@ mongoose.connect(db).then(() => {
 }).catch((error: any) => {
   console.log("Error connecting to MongoDB", error)
 })
+
+initializeFirebase();
 
 app.use("/api/customer", customerRoutes);
 app.use("/api/project", projectRoutes);

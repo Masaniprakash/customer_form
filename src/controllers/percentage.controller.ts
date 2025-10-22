@@ -9,6 +9,7 @@ import EditRequest from "../models/editRequest.model";
 import CustomRequest from "../type/customRequest";
 import { IUser } from "../type/user";
 import { IEditRequest } from "../type/editRequest";
+import { sendPushNotificationToSuperAdmin } from "./common";
 export const createPercentage = async (req: Request, res: Response) => {
     let body = req.body, err;
     let { name, rate } = body;
@@ -37,7 +38,7 @@ export const createPercentage = async (req: Request, res: Response) => {
 
 export const updatePercentage = async (req: CustomRequest, res: Response) => {
     const body = req.body, user = req.user as IUser;
-    if(!user) return ReE(res, { message: `authentication not added in this api please contact admin!` }, httpStatus.UNAUTHORIZED);
+    if (!user) return ReE(res, { message: `authentication not added in this api please contact admin!` }, httpStatus.UNAUTHORIZED);
     let err: any;
     let { _id, name, rate } = body;
     let fields = ["name", "rate"];
@@ -121,8 +122,17 @@ export const updatePercentage = async (req: CustomRequest, res: Response) => {
 
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-        return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+        createReq = createReq as IEditRequest;
 
+        ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+        let send = await sendPushNotificationToSuperAdmin("Edit request for Percentage", `A new edit request for Percentage has been created by ${user.name}`, createReq._id.toString())
+
+        if (!send.success) {
+            return console.log(send.message);
+        }
+
+        return console.log("Edit request push notification sent.");
     } else {
 
         const [updateErr, updateResult] = await toAwait(

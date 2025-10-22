@@ -9,6 +9,7 @@ import CustomRequest from "../type/customRequest";
 import { IUser } from "../type/user";
 import EditRequest from "../models/editRequest.model";
 import { IEditRequest } from "../type/editRequest";
+import { sendPushNotificationToSuperAdmin } from "./common";
 
 export const createMarketDetail = async (req: Request, res: Response) => {
     let body = req.body, err;
@@ -102,10 +103,10 @@ export const updateMarketDetail = async (req: CustomRequest, res: Response) => {
     if (user.isAdmin === false) {
 
         const changes: { field: string; oldValue: any; newValue: any }[] = [];
-        fields.forEach((key:any) => {
+        fields.forEach((key: any) => {
             const newValue = body[key];
             const oldValue = (getMarketDetail as any)[key];
-            if(isNull(newValue)) return
+            if (isNull(newValue)) return
             if (newValue.toString() !== oldValue.toString()) {
                 changes.push({ field: key, oldValue, newValue });
             }
@@ -123,13 +124,13 @@ export const updateMarketDetail = async (req: CustomRequest, res: Response) => {
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
         if (checkEditRequest) {
             checkEditRequest = checkEditRequest as IEditRequest;
-            let get=[]
+            let get = []
             checkEditRequest.changes.forEach((change) => {
                 if (changes.some((c) => c.field.toString() === change.field.toString())) {
                     get.push(change)
                 }
             })
-            if(checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending"){
+            if (checkEditRequest.changes.length === get.length && checkEditRequest.status === "pending") {
                 return ReE(res, { message: "You already have a pending edit request for this marketDetail." }, httpStatus.BAD_REQUEST);
             }
         }
@@ -147,9 +148,19 @@ export const updateMarketDetail = async (req: CustomRequest, res: Response) => {
 
         if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-        return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+        createReq = createReq as IEditRequest;
 
-    }else{
+        ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+        let send = await sendPushNotificationToSuperAdmin("Edit request for MarketDetail", `A new edit request for marketDetail has been created by ${user.name}`, createReq._id.toString())
+
+        if (!send.success) {
+            return console.log(send.message);
+        }
+
+        return console.log("Edit request push notification sent.");
+
+    } else {
 
         let updateResult;
 

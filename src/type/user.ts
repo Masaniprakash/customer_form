@@ -7,4 +7,5 @@ export interface IUser {
   imageUrl?: string;
   role: string;
   isAdmin:boolean;
+  fcmToken?:String[],
 }

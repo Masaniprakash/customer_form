@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
   imageUrl: {
     type: String
   },
+  fcmToken:[String],
   role:{
     type: Schema.Types.ObjectId,
     ref: 'Role'

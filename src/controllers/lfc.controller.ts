@@ -12,6 +12,7 @@ import EditRequest from "../models/editRequest.model";
 import { IUser } from "../type/user";
 import { IEditRequest } from "../type/editRequest";
 import CustomRequest from "../type/customRequest";
+import { sendPushNotificationToSuperAdmin } from "./common";
 
 export const createLfc = async (req: Request, res: Response) => {
   let body = req.body, err;
@@ -235,7 +236,7 @@ export const updateLfc = async (req: CustomRequest, res: Response) => {
       });
 
       if (changes.length === 0) {
-        return ReE(res, { message: "No changes found to update nvt." }, httpStatus.BAD_REQUEST);
+        return ReE(res, { message: "No changes found to update lfc." }, httpStatus.BAD_REQUEST);
       }
 
       let checkEditRequest;
@@ -276,7 +277,18 @@ export const updateLfc = async (req: CustomRequest, res: Response) => {
 
       if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
-      return ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+      createReq = createReq as IEditRequest;
+
+      ReS(res, { message: "Edit request created successfully, Awaiting for approval." }, httpStatus.OK);
+
+      let send = await sendPushNotificationToSuperAdmin("Edit request for LFC", `A new edit request for LFC has been created by ${user.name}`, createReq._id.toString())
+
+      if (!send.success) {
+        return console.log(send.message);
+      }
+
+      return console.log("Edit request push notification sent.");
+
 
     } else {
       [err, createMod] = await toAwait(Lfc.updateOne({ _id: lfc._id }, { $set: updateFields }));

@@ -23,6 +23,8 @@ import { IEmi } from "../type/emi";
 import { ICustomer } from "../type/customer";
 import IMarketer from "../type/Marketer";
 import CustomRequest from "../type/customRequest";
+import { User } from "../models/user.model";
+import { IUser } from "../type/user";
 
 
 export const uploadImages = async (req: Request, res: Response) => {
@@ -184,8 +186,8 @@ export const UpdateCommonData = async (req: CustomRequest, res: Response) => {
     let body = req.body, user = req.user, err: any;
     const { general, plot, flat } = body;
 
-    if(user){
-        if(user.isAdmin === false){
+    if (user) {
+        if (user.isAdmin === false) {
             return ReE(res, { message: "You are not access this api" }, httpStatus.UNAUTHORIZED);
         }
 
@@ -207,7 +209,7 @@ export const UpdateCommonData = async (req: CustomRequest, res: Response) => {
             return ReE(res, { message: `If update general then general object is required` }, httpStatus.BAD_REQUEST);
         }
 
-        if(!general.editDeleteReason){
+        if (!general.editDeleteReason) {
             return ReE(res, { message: `If update general then general.editDeleteReason is required` }, httpStatus.BAD_REQUEST);
         }
 
@@ -1042,17 +1044,60 @@ export const checkEmi = async (req: Request, res: Response) => {
         return ReE(res, { message: `This emi doesn't belong to this customer!` }, httpStatus.BAD_REQUEST)
     }
     let getGeneral;
-    [err, getGeneral] = await toAwait(General.findOne({_id:checkEmi.general}));
+    [err, getGeneral] = await toAwait(General.findOne({ _id: checkEmi.general }));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
     if (!getGeneral) {
         return ReE(res, { message: `general not found for given emi id so can't do billing!.` }, httpStatus.NOT_FOUND)
     }
     getGeneral = getGeneral as IGeneral
-    if (getGeneral.status   === "blocked") {
+    if (getGeneral.status === "blocked") {
         return ReE(res, { message: `This general is blocked so can't do billing!` }, httpStatus.NOT_FOUND)
     }
-    if(checkEmi?.paidAmt){
+    if (checkEmi?.paidAmt) {
         return ReE(res, { message: `This emi is already paid!` }, httpStatus.NOT_FOUND)
     }
     ReS(res, { message: "emi found", data: checkEmi }, httpStatus.OK)
+}
+
+export const storeFcmToken = async (req: Request, res: Response) => {
+    let body = req.body, err;
+
+    let { fcm_token } = body;
+
+    let field = ["fcm_token"];
+
+    let inVaildFields = field.filter(x => isNull(body[x]));
+
+    if (inVaildFields.length > 0) {
+        return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
+    }
+
+    let getAllSuperAdmin;
+
+    [err, getAllSuperAdmin] = await toAwait(User.find({isAdmin:true}));
+
+    if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    getAllSuperAdmin = getAllSuperAdmin as IUser[]
+
+    if (getAllSuperAdmin.length === 0) {
+        return ReE(res, { message: `Super Admin not found!.` }, httpStatus.NOT_FOUND);
+    }
+
+    for (let index = 0; index < getAllSuperAdmin.length; index++) {
+        let element = getAllSuperAdmin[index];
+        element = element as IUser;
+        let fcmToken = element.fcmToken as string[];
+        let newValue = [...fcmToken, fcm_token];
+        //remove duplicate
+        let unique = newValue.filter((v, i) => newValue.indexOf(v) === i);
+        unique = unique as string[];
+        if(unique.length === 0) continue;
+        let updateUser;
+        [err,updateUser] = await toAwait(User.updateOne({ _id: element._id }, { $set: { fcmToken: unique } }));
+        if (err) return console.log(err) ;       
+    }
+
+    return ReS(res, { message: "successfully store fcm token" }, httpStatus.OK)
+
 }
