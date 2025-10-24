@@ -13,6 +13,7 @@ export interface ILFC {
   conversion: boolean;
   needMod: boolean;
   mod: Types.ObjectId;
+  project: Types.ObjectId;
   nvt: Types.ObjectId[] | string[]; 
 }
 

@@ -25,6 +25,10 @@ const lfcSchema = new mongoose.Schema({
     type: Boolean,
     required: true
   },
+  project: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Project"
+  },
   mod: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Mod"

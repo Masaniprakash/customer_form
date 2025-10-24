@@ -13,6 +13,7 @@ import { IUser } from "../type/user";
 import { IEditRequest } from "../type/editRequest";
 import CustomRequest from "../type/customRequest";
 import { sendPushNotificationToSuperAdmin } from "./common";
+import { Project } from "../models/project.model";
 
 export const createLfc = async (req: Request, res: Response) => {
   let body = req.body, err;
@@ -20,8 +21,8 @@ export const createLfc = async (req: Request, res: Response) => {
   if (!lfc) {
     return ReE(res, "lfc is required", httpStatus.BAD_REQUEST);
   }
-  let { customer, introductionName, emi, inital, totalSqFt, sqFtAmount, plotNo, registration, conversion, needMod, nvt } = lfc;
-  let fields = ["customer", "introductionName", "emi", "inital", "totalSqFt", "sqFtAmount", "plotNo", "registration", "conversion", "needMod"];
+  let { customer, introductionName, emi, inital,project, totalSqFt, sqFtAmount, plotNo, registration, conversion, needMod, nvt } = lfc;
+  let fields = ["customer", "introductionName", "emi", "project","inital", "totalSqFt", "sqFtAmount", "plotNo", "registration", "conversion", "needMod"];
   let inVaildFields = fields.filter(x => isNull(lfc[x]));
   if (inVaildFields.length > 0) {
     return ReE(res, { message: `Please enter required fields ${inVaildFields}!.` }, httpStatus.BAD_REQUEST);
@@ -29,25 +30,40 @@ export const createLfc = async (req: Request, res: Response) => {
   if (typeof needMod !== 'boolean') {
     return ReE(res, "needMod must be boolean", httpStatus.BAD_REQUEST);
   }
+  if(project){
+    if (!mongoose.isValidObjectId(project)) {
+      return ReE(res, "project invalid id : " + project, httpStatus.BAD_REQUEST);
+    }
+    let checkProject;
+    [err, checkProject] = await toAwait(Project.findById(project));
+    if (err) {
+      return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    }
+    if (!checkProject) {
+      return ReE(res, "project not found given id: " + project, httpStatus.NOT_FOUND);
+    }
+  }
   if (nvt) {
-    if (!Array.isArray(nvt)) {
-      return ReE(res, "nvt must be array", httpStatus.BAD_REQUEST);
-    }
-    if (nvt.length === 0) {
-      return ReE(res, "Please select at least one nvt", httpStatus.BAD_REQUEST);
-    }
-    for (let index = 0; index < nvt.length; index++) {
-      const element = nvt[index];
-      if (!mongoose.isValidObjectId(element)) {
-        return ReE(res, "nvt invalid id : " + element, httpStatus.BAD_REQUEST);
-      }
-      let checkNvt;
-      [err, checkNvt] = await toAwait(Nvt.findById(element));
-      if (err) {
-        return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-      }
-      if (!checkNvt) {
-        return ReE(res, "nvt not found given id: " + element, httpStatus.NOT_FOUND);
+    // if (!Array.isArray(nvt)) {
+    //   return ReE(res, "nvt must be array", httpStatus.BAD_REQUEST);
+    // }
+    // if (nvt.length === 0) {
+    //   return ReE(res, "Please select at least one nvt", httpStatus.BAD_REQUEST);
+    // }
+    if (nvt.length !== 0) {
+      for (let index = 0; index < nvt.length; index++) {
+        const element = nvt[index];
+        if (!mongoose.isValidObjectId(element)) {
+          return ReE(res, "nvt invalid id : " + element, httpStatus.BAD_REQUEST);
+        }
+        let checkNvt;
+        [err, checkNvt] = await toAwait(Nvt.findById(element));
+        if (err) {
+          return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+        }
+        if (!checkNvt) {
+          return ReE(res, "nvt not found given id: " + element, httpStatus.NOT_FOUND);
+        }
       }
     }
   }
@@ -116,8 +132,8 @@ export const updateLfc = async (req: CustomRequest, res: Response) => {
     return ReE(res, { message: `lfc not found!.` }, httpStatus.NOT_FOUND);
   }
   checkLfc = checkLfc as ILFC;
-  let { customer, introductionName, emi, inital, totalSqFt, sqFtAmount, plotNo, registration, conversion, needMod, nvt } = lfc;
-  let fields = ["customer", "introductionName", "emi", "inital", "totalSqFt", "sqFtAmount", "plotNo", "registration", "conversion", "needMod", "nvt"];
+  let { customer, introductionName,project, emi, inital, totalSqFt, sqFtAmount, plotNo, registration, conversion, needMod, nvt } = lfc;
+  let fields = ["customer", "introductionName","project", "emi", "inital", "totalSqFt", "sqFtAmount", "plotNo", "registration", "conversion", "needMod", "nvt"];
   let modFields = ["date", "siteName", "plotNo", "introducerName", "introducerPhone", "directorName", "directorPhone", "EDName", "EDPhone", "amount", "status"];
   let inVaildFields = fields.filter(x => !isNull(lfc[x]));
   if (inVaildFields.length === 0) {
@@ -150,6 +166,19 @@ export const updateLfc = async (req: CustomRequest, res: Response) => {
       if (!checkNvt) {
         return ReE(res, "nvt not found given id: " + element, httpStatus.NOT_FOUND);
       }
+    }
+  }
+  if(project){
+    if (!mongoose.isValidObjectId(project)) {
+      return ReE(res, "project invalid id : " + project, httpStatus.BAD_REQUEST);
+    }
+    let checkProject;
+    [err, checkProject] = await toAwait(Project.findById(project));
+    if (err) {
+      return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+    }
+    if (!checkProject) {
+      return ReE(res, "project not found given id: " + project, httpStatus.NOT_FOUND);
     }
   }
   if (customer) {
@@ -289,7 +318,6 @@ export const updateLfc = async (req: CustomRequest, res: Response) => {
 
       return console.log("Edit request push notification sent.");
 
-
     } else {
       [err, createMod] = await toAwait(Lfc.updateOne({ _id: lfc._id }, { $set: updateFields }));
       if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
@@ -318,7 +346,7 @@ export const getByIdLfc = async (req: Request, res: Response) => {
   }
 
   let getLfc;
-  [err, getLfc] = await toAwait(Lfc.findOne({ _id: id }).populate("customer").populate("mod").populate({
+  [err, getLfc] = await toAwait(Lfc.findOne({ _id: id }).populate("customer").populate("mod").populate("project").populate({
     path: "nvt",
     populate: {
       path: "mod"
@@ -335,7 +363,7 @@ export const getByIdLfc = async (req: Request, res: Response) => {
 
 export const getAllLfc = async (req: Request, res: Response) => {
   let err, getLfc;
-  [err, getLfc] = await toAwait(Lfc.find().populate("customer").populate("mod").populate({
+  [err, getLfc] = await toAwait(Lfc.find().populate("customer").populate("project").populate("mod").populate({
     path: "nvt",
     populate: {
       path: "mod"
