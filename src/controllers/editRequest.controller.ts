@@ -46,9 +46,9 @@ export const approvedEditRequest = async (req: CustomRequest, res: Response) => 
     //     return ReE(res, { message: `edit request already ${checkEdit.status}!.` }, httpStatus.BAD_REQUEST)
     // }
 
-    if (status === "rejected" && !reason) {
-        return ReE(res, { message: `reason is required for rejected!.` }, httpStatus.BAD_REQUEST)
-    }
+    // if (status === "rejected" && !reason) {
+    //     return ReE(res, { message: `reason is required for rejected!.` }, httpStatus.BAD_REQUEST)
+    // }
 
     if (status === "approved") {
         if (reason) {
