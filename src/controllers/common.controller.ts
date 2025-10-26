@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { General } from "../models/general.model";
 import { Plot } from "../models/plot.model";
 import { Emi } from "../models/emi.model";
-import { isNull, isValidDate, ReE, ReS, toAwait } from "../services/util.service";
+import { isEmpty, isNull, isValidDate, ReE, ReS, toAwait } from "../services/util.service";
 import httpStatus from "http-status";
 import { Customer } from "../models/customer.model";
 import { Billing } from "../models/billing.model";
@@ -938,7 +938,7 @@ export const getAllDataBasedOnGeneral = async (req: Request, res: Response) => {
 
     for (const general of generalList) {
         let objPlot, objFlat, objMarketer, objEmi, objBilling;
-        if(general._id){
+        if(general?._id){
             [err, objPlot] = await toAwait(Plot.find({ general: general._id }).populate("customer").populate("general"));
             if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
             [err, objFlat] = await toAwait(Flat.find({ general: general._id }).populate("customer").populate("general"));
@@ -979,6 +979,10 @@ export const getDataBasedOnGeneralById = async (req: Request, res: Response) => 
     let err, general;
     [err, general] = await toAwait(General.findOne({ _id: id }).populate("customer").populate("marketer"));
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+    if(!general){
+        return  ReE(res,{message :"general not found for given id"},httpStatus.NOT_FOUND)
+    }
 
     general = general as IGeneral
 
