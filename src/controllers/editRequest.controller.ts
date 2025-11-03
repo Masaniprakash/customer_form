@@ -170,6 +170,182 @@ export const approvedEditRequest = async (
 export const getAllEditRequests = async (req: CustomRequest, res: Response) => {
   let err;
 
+  // Get query params
+  const { date, export: isExport } = req.query;
+
+  // Build filter object
+  const filter: any = {};
+
+  // Add date filter if provided (filters for entire day)
+  if (date) {
+    const queryDate = new Date(date as string);
+
+    if (isNaN(queryDate.getTime())) {
+      return ReE(
+        res,
+        { message: "Invalid date format. Use YYYY-MM-DD" },
+        httpStatus.BAD_REQUEST
+      );
+    }
+
+    // Set to start of day (00:00:00)
+    const startOfDay = new Date(queryDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    // Set to end of day (23:59:59.999)
+    const endOfDay = new Date(queryDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    filter.createdAt = {
+      $gte: startOfDay,
+      $lte: endOfDay,
+    };
+  }
+
+  // Fetch edit requests with filter
+  let editRequests: IEditRequest[];
+  let _result: unknown;
+  [err, _result] = await toAwait(
+    EditRequest.find(filter).sort({ createdAt: -1 })
+  );
+  editRequests = _result as IEditRequest[];
+
+  if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+
+  if (!editRequests || editRequests.length === 0) {
+    // Return empty array for export, 404 for normal requests
+    if (isExport === "true") {
+      return ReS(
+        res,
+        {
+          message: "No edit requests found",
+          data: [],
+          totalCount: 0,
+        },
+        httpStatus.OK
+      );
+    }
+
+    // Return empty array for normal requests too (not 404)
+    return ReS(
+      res,
+      {
+        message: "No edit requests found",
+        data: [],
+      },
+      httpStatus.OK
+    );
+  }
+
+  // Filter data if created admin (not super admin)
+  if (req.isCreatedAdmin === true) {
+    // Filter changes array to only include allowed fields
+    const allowedFields = [
+      "name",
+      "date",
+      "mode of payment",
+      "reference number",
+    ];
+
+    const filteredRequests = editRequests.map((request: any) => {
+      const filteredChanges = request.changes.filter((change: any) => {
+        return allowedFields.includes(change.field);
+      });
+
+      return {
+        _id: request._id,
+        targetModel: request.targetModel,
+        targetId: request.targetId,
+        editedBy: request.editedBy,
+        changes: filteredChanges, // Only allowed fields
+        status: request.status,
+        createdAt: request.createdAt,
+        updatedAt: request.updatedAt,
+      };
+    });
+
+    // Return export format if requested
+    if (isExport === "true") {
+      return ReS(
+        res,
+        {
+          message: "Edit requests exported successfully (filtered)",
+          data: filteredRequests,
+          totalCount: filteredRequests.length,
+        },
+        httpStatus.OK
+      );
+    }
+
+    return ReS(
+      res,
+      {
+        message: "Edit requests retrieved successfully (filtered)",
+        data: filteredRequests,
+      },
+      httpStatus.OK
+    );
+  }
+
+  // Super admin - return all data
+  // Return export format if requested
+  if (isExport === "true") {
+    return ReS(
+      res,
+      {
+        message: "Edit requests exported successfully",
+        data: editRequests,
+        totalCount: editRequests.length,
+      },
+      httpStatus.OK
+    );
+  }
+
+  return ReS(
+    res,
+    {
+      message: "Edit requests retrieved successfully",
+      data: editRequests,
+    },
+    httpStatus.OK
+  );
+};
+
+
+export const getByIdEditRequest = async (req: Request, res: Response) => {
+  let err,
+    { id } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return ReE(
+      res,
+      { message: `Invalid edit request id!` },
+      httpStatus.BAD_REQUEST
+    );
+  }
+
+  let getUser;
+  [err, getUser] = await toAwait(
+    EditRequest.findOne({ _id: id }).populate("approvedBy").populate("editedBy")
+  );
+
+  if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
+  if (!getUser) {
+    return ReE(
+      res,
+      { message: `edit request not found for given id!.` },
+      httpStatus.NOT_FOUND
+    );
+  }
+
+  ReS(res, { message: "edit request found", data: getUser }, httpStatus.OK);
+};
+
+
+/* 
+export const getAllEditRequests = async (req: CustomRequest, res: Response) => {
+  let err;
+
   // Your existing logic to fetch edit requests
   let editRequests: IEditRequest[];
   let _result: unknown;
@@ -234,32 +410,4 @@ export const getAllEditRequests = async (req: CustomRequest, res: Response) => {
     httpStatus.OK
   );
 };
-
-export const getByIdEditRequest = async (req: Request, res: Response) => {
-  let err,
-    { id } = req.params;
-
-  if (!mongoose.isValidObjectId(id)) {
-    return ReE(
-      res,
-      { message: `Invalid edit request id!` },
-      httpStatus.BAD_REQUEST
-    );
-  }
-
-  let getUser;
-  [err, getUser] = await toAwait(
-    EditRequest.findOne({ _id: id }).populate("approvedBy").populate("editedBy")
-  );
-
-  if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
-  if (!getUser) {
-    return ReE(
-      res,
-      { message: `edit request not found for given id!.` },
-      httpStatus.NOT_FOUND
-    );
-  }
-
-  ReS(res, { message: "edit request found", data: getUser }, httpStatus.OK);
-};
+*/
