@@ -61,7 +61,7 @@ app.use("/api/common", common);
 app.use("/api/plot/booking", plotBookingFormRoutes);
 app.use("/api/life/saving", lifeSacingRoutes);
 app.use("/api/edit/request", editRequestRoutes);
-app.use("/api/log", logRoutes)
+app.use("/api/logs", logRoutes)
 
 cron.schedule("02 00 * * *", async () => {
   console.log("Running cron job");

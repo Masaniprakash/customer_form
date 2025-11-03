@@ -19,38 +19,48 @@ export const getAllLogs = async (req: Request, res: Response) => {
   let err;
   let { date, page = "1", limit = "10", export: isExport } = req.query;
 
-  // Set default to today if date not provided
-  if (!date) {
+  let dateFilter: any = {};
+
+  // Only apply date filter if date is provided
+  if (date && !isNull(date as string)) {
+    const queryDate = new Date(date as string);
+    if (isNaN(queryDate.getTime())) {
+      return ReE(
+        res,
+        { message: "Invalid date format!" },
+        httpStatus.BAD_REQUEST
+      );
+    }
+
+    // Set date range for the entire day
+    const startOfDay = new Date(queryDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(queryDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    dateFilter = {
+      createdAt: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      },
+    };
+  }
+  // If no date provided and not exporting, default to today
+  else if (isExport !== "true") {
     const today = new Date();
-    date = today.toISOString().split("T")[0]; // Format: YYYY-MM-DD
-  }
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
 
-  // Validate date parameter
-  if (isNull(date as string)) {
-    return ReE(res, { message: "Date is required!" }, httpStatus.BAD_REQUEST);
+    dateFilter = {
+      createdAt: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      },
+    };
   }
-  // Parse and validate date
-  const queryDate = new Date(date as string);
-  if (isNaN(queryDate.getTime())) {
-    return ReE(
-      res,
-      { message: "Invalid date format!" },
-      httpStatus.BAD_REQUEST
-    );
-  }
-
-  // Set date range for the entire day
-  const startOfDay = new Date(queryDate);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(queryDate);
-  endOfDay.setHours(23, 59, 59, 999);
-
-  const dateFilter = {
-    createdAt: {
-      $gte: startOfDay,
-      $lte: endOfDay,
-    },
-  };
+  // If exporting without date, fetch ALL logs (no date filter)
 
   // Define collections with their module names
   const collections = [
@@ -105,35 +115,35 @@ export const getAllLogs = async (req: Request, res: Response) => {
     }
   }
   // Check if no logs found - RETURN EMPTY ARRAY instead of 404
-    if (allLogs.length === 0) {
-      // For export
-      if (isExport === "true") {
-        return ReS(
-          res,
-          {
-            message: "No logs found for the given date!",
-            data: [],
-            totalCount: 0,
-          },
-          httpStatus.OK
-        );
-      }
-      // For pagination
+  if (allLogs.length === 0) {
+    // For export
+    if (isExport === "true") {
       return ReS(
         res,
         {
           message: "No logs found for the given date!",
           data: [],
-          pagination: {
-            currentPage: parseInt(page as string),
-            pageSize: parseInt(limit as string),
-            totalCount: 0,
-            totalPages: 0,
-          },
+          totalCount: 0,
         },
         httpStatus.OK
       );
     }
+    // For pagination
+    return ReS(
+      res,
+      {
+        message: "No logs found for the given date!",
+        data: [],
+        pagination: {
+          currentPage: parseInt(page as string),
+          pageSize: parseInt(limit as string),
+          totalCount: 0,
+          totalPages: 0,
+        },
+      },
+      httpStatus.OK
+    );
+  }
 
   // Sort by createdAt (newest first)
   allLogs.sort(
