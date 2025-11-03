@@ -13,6 +13,7 @@ import roleMenu from './routes/roleMenu.routes'
 import percentage from './routes/percentage.routes'
 import common from './routes/common.routes'
 import user from './routes/user.routes'
+import logRoutes from './routes/log.routes'
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -60,6 +61,7 @@ app.use("/api/common", common);
 app.use("/api/plot/booking", plotBookingFormRoutes);
 app.use("/api/life/saving", lifeSacingRoutes);
 app.use("/api/edit/request", editRequestRoutes);
+app.use("/api/log", logRoutes)
 
 cron.schedule("02 00 * * *", async () => {
   console.log("Running cron job");
