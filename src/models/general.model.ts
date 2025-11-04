@@ -1,43 +1,52 @@
 import mongoose, { model, Schema } from "mongoose";
 
-const GeneralSchema = new Schema({
+const GeneralSchema = new Schema(
+  {
     customer: {
-        type: mongoose.Schema.Types.String,
-        ref: "Customer",
+      type: mongoose.Schema.Types.String,
+      ref: "Customer",
     },
     marketer: {
-        type: mongoose.Schema.Types.String,
-        ref: "MarketingHead",
+      type: mongoose.Schema.Types.String,
+      ref: "MarketingHead",
     },
     saleDeedDoc: {
-        type: String
+      type: String,
     },
     paymentTerms: {
-        type: String
+      type: String,
+    },
+    percentage: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100,
     },
     emiAmount: {
-        type: Number
+      type: Number,
     },
     noOfInstallments: {
-        type: Number
+      type: Number,
     },
     motherDoc: {
-        type: String
+      type: String,
     },
     status: {
-        type: String,
-        enum: ["Enquired", "Blocked", "Vacant"],
-        // required: true,
+      type: String,
+      enum: ["Enquired", "Blocked", "Vacant"],
+      // required: true,
     },
     loan: {
-        type: String
+      type: String,
     },
     offered: {
-        type: String
+      type: String,
     },
     editDeleteReason: {
-        type: String
+      type: String,
     },
-}, { timestamps: true });
+  },
+  { timestamps: true }
+);
 
 export const General = model("General", GeneralSchema);
