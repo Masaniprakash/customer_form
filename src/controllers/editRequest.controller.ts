@@ -247,22 +247,27 @@ export const getAllEditRequests = async (req: CustomRequest, res: Response) => {
       "reference number",
     ];
 
-    const filteredRequests = editRequests.map((request: any) => {
-      const filteredChanges = request.changes.filter((change: any) => {
-        return allowedFields.includes(change.field);
-      });
+    // ONLY include requests where ALL changes are from allowed fields
+    const filteredRequests = editRequests
+      .filter((request: any) => {
+        // Check if ALL changes in this request are allowed
+        const allChangesAllowed = request.changes.every((change: any) =>
+          allowedFields.includes(change.field)
+        );
 
-      return {
+        // Only return this request if all changes are allowed
+        return allChangesAllowed;
+      })
+      .map((request: any) => ({
         _id: request._id,
         targetModel: request.targetModel,
         targetId: request.targetId,
         editedBy: request.editedBy,
-        changes: filteredChanges, // Only allowed fields
+        changes: request.changes, // Include all changes (they're all allowed)
         status: request.status,
         createdAt: request.createdAt,
         updatedAt: request.updatedAt,
-      };
-    });
+      }));
 
     // Return export format if requested
     if (isExport === "true") {
@@ -311,7 +316,6 @@ export const getAllEditRequests = async (req: CustomRequest, res: Response) => {
   );
 };
 
-
 export const getByIdEditRequest = async (req: Request, res: Response) => {
   let err,
     { id } = req.params;
@@ -340,7 +344,6 @@ export const getByIdEditRequest = async (req: Request, res: Response) => {
 
   ReS(res, { message: "edit request found", data: getUser }, httpStatus.OK);
 };
-
 
 /* 
 export const getAllEditRequests = async (req: CustomRequest, res: Response) => {
