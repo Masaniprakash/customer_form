@@ -85,13 +85,25 @@ export const getAllLogs = async (req: Request, res: Response) => {
 
   for (const collection of collections) {
     let results: any[];
-    const tuple: any = await toAwait(
-      (collection.model as any)
-        .find(dateFilter)
-        .select("_id createdBy createdAt")
-        .lean()
-    );
-    [err, results] = tuple;
+    let tuple: any[];
+
+    if (collection.moduleName === "Roles & Menu Mapping") {
+      const tuple: any = await toAwait(
+        (collection.model as any)
+          .find(dateFilter)
+          .select("_id createdBy createdAt roleId")
+          .lean()
+      );
+      [err, results] = tuple;
+    } else {
+      const tuple: any = await toAwait(
+        (collection.model as any)
+          .find(dateFilter)
+          .select("_id createdBy createdAt")
+          .lean()
+      );
+      [err, results] = tuple;
+    }
 
     if (err) return ReE(res, err, httpStatus.INTERNAL_SERVER_ERROR);
 
@@ -101,6 +113,7 @@ export const getAllLogs = async (req: Request, res: Response) => {
           _id: item._id,
           moduleName: collection.moduleName,
           createdAt: item.createdAt,
+          roleId: item.roleId ? item.roleId : null
         };
 
         // Only add createdBy if it exists and hasCreatedBy is true
